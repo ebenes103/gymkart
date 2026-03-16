@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Product - GymKart Seller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+
+<!-- Simple Header - Only Logo -->
+<div class="bg-white shadow-md px-8 py-4">
+    <div class="flex items-center space-x-2">
+        <span class="text-2xl font-extrabold">
+            <span class="text-red-600">GYM</span><span class="text-gray-800">KART</span>
+        </span>
+        <span class="bg-gray-200 text-gray-600 text-sm px-3 py-1 rounded-full ml-4">Seller Panel</span>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="max-w-4xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+        
+        <!-- Header -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-3xl font-bold text-gray-800 flex items-center">
+                <i class="fas fa-edit text-red-600 mr-3"></i>
+                Edit Product: {{ product.name }}
+            </h2>
+            <p class="text-gray-500 mt-2">Update your product details below</p>
+        </div>
+        
+        <!-- Display Form Errors -->
+        {% if form.errors %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <strong class="font-bold">Form Errors:</strong>
+            <ul class="mt-2 list-disc list-inside">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ field }}: {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if formset.errors %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <strong class="font-bold">Image Errors:</strong>
+            <ul class="mt-2 list-disc list-inside">
+                {% for error in formset.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Form -->
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-info-circle text-red-600 mr-2"></i>
+                    Basic Information
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Product ID
+                        </label>
+                        {{ form.product_id }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Product Name
+                        </label>
+                        {{ form.name }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Brand
+                        </label>
+                        {{ form.brand }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Category
+                        </label>
+                        {{ form.category }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Price (₹)
+                        </label>
+                        {{ form.price }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-align-left text-red-600 mr-2"></i>
+                    Description
+                </h3>
+                {{ form.description }}
+            </div>
+            
+            <!-- Weight Options & Stock -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-weight-hanging text-red-600 mr-2"></i>
+                    Weight Options & Stock Management
+                </h3>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-blue-700">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Current weights and stock for this product:
+                    </p>
+                    <div class="mt-3">
+                        {% if product.available_weights %}
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            {% for weight in product.available_weights %}
+                            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                                {{ weight }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Available Weights
+                        </label>
+                        <input type="text" name="available_weights_input" 
+                               value="{{ form.available_weights_input.value|default:'' }}" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                               placeholder="e.g., 2kg, 5kg, 10kg, 20kg">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock per Weight
+                        </label>
+                        <input type="text" name="stock_per_weight_input" 
+                               value="{{ form.stock_per_weight_input.value|default:'' }}" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                               placeholder="e.g., 2kg:10, 5kg:8, 10kg:5">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Main Image -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-image text-red-600 mr-2"></i>
+                    Current Main Image
+                </h3>
+                <div class="flex items-center space-x-4">
+                    <img src="{{ product.image.url }}" class="w-32 h-32 object-cover rounded-lg border">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Replace Image (optional)
+                        </label>
+                        {{ form.image }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Extra Images -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-images text-red-600 mr-2"></i>
+                    Extra Images
+                </h3>
+                
+                <!-- Current Extra Images -->
+                {% if product.extra_images.all %}
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-3">Current extra images:</p>
+                    <div class="flex flex-wrap gap-4">
+                        {% for img in product.extra_images.all %}
+                        <div class="relative">
+                            <img src="{{ img.image.url }}" class="w-24 h-24 object-cover rounded-lg border">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {{ formset.management_form }}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for image_form in formset %}
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                        {{ image_form.image }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Submit Buttons -->
+            <div class="flex space-x-4 pt-4 border-t border-gray-200">
+                <button type="submit" class="bg-red-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-700 transition shadow-md">
+                    Update Product
+                </button>
+                <a href="{% url 'seller_dashboard' %}" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

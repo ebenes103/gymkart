@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<!-- HERO SECTION with Overlay -->
+<div class="relative h-[500px] overflow-hidden bg-black">
+    <img id="heroImage" src="{% static 'images/gym1.jpg' %}" class="w-full h-full object-cover opacity-80 transition-opacity duration-1000">
+    <div class="absolute inset-0 flex flex-col items-center justify-center text-center text-white">
+        <h1 class="text-5xl md:text-6xl font-bold mb-4">Welcome to <span class="text-red-600">GymKart</span></h1>
+        <p class="text-xl md:text-2xl mb-8 max-w-2xl">Your one-stop destination for premium fitness equipment</p>
+        
+        <!-- SEARCH BAR - Centered in Hero -->
+        <form method="GET" action="{% url 'product_list' %}" class="flex w-full max-w-2xl shadow-2xl rounded-lg overflow-hidden">
+            <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Search gym equipment, brands, categories..." class="flex-1 px-6 py-4 text-gray-800 text-lg focus:outline-none">
+            <button type="submit" class="bg-red-600 text-white px-8 py-4 hover:bg-red-700 font-semibold text-lg transition">
+                Search
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- QUOTE SLIDER - Motivational -->
+<div class="bg-gradient-to-r from-red-700 to-red-500 text-white py-10">
+    <div class="max-w-4xl mx-auto text-center px-4">
+        <p id="quote" class="text-2xl md:text-3xl font-light italic leading-relaxed transition-opacity duration-500">
+            “The pain you feel today will be the strength you feel tomorrow.”
+        </p>
+        <div class="flex justify-center space-x-2 mt-6">
+            <span class="w-2 h-2 bg-white rounded-full"></span>
+            <span class="w-2 h-2 bg-white/50 rounded-full"></span>
+            <span class="w-2 h-2 bg-white/50 rounded-full"></span>
+            <span class="w-2 h-2 bg-white/50 rounded-full"></span>
+        </div>
+    </div>
+</div>
+
+<!-- PRODUCTS SECTION - Modern Grid -->
+<div class="max-w-7xl mx-auto px-4 py-16">
+    <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold text-gray-800 mb-2">Popular Gym Equipment</h2>
+        <p class="text-gray-600 text-lg">Top-rated products from trusted sellers</p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        {% for product in products %}
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2">
+            <a href="{% url 'product_detail' product.id %}" class="block relative h-56 overflow-hidden">
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-full object-cover hover:scale-110 transition duration-500">
+                
+                <!-- Stock Badge - Updated to use get_total_stock method -->
+                {% with total_stock=product.get_total_stock %}
+                    {% if total_stock == 0 %}
+                    <span class="absolute top-3 left-3 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-full font-semibold">Out of Stock</span>
+                    {% elif total_stock <= 3 %}
+                    <span class="absolute top-3 left-3 bg-red-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold animate-pulse">Only {{ total_stock }} left</span>
+                    {% elif total_stock < 10 %}
+                    <span class="absolute top-3 left-3 bg-yellow-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold">Low Stock</span>
+                    {% else %}
+                    <span class="absolute top-3 left-3 bg-green-600 text-white text-xs px-3 py-1.5 rounded-full font-semibold">In Stock</span>
+                    {% endif %}
+                {% endwith %}
+            </a>
+            
+            <div class="p-5">
+                <a href="{% url 'product_detail' product.id %}">
+                    <h3 class="text-xl font-bold text-gray-800 hover:text-red-600 transition mb-1">{{ product.name }}</h3>
+                </a>
+                
+                <div class="flex items-center text-sm text-gray-500 mb-2">
+                    <span>{{ product.brand }}</span>
+                    <span class="mx-2">•</span>
+                    <span>{{ product.category }}</span>
+                </div>
+                
+                <!-- Available Weights Display -->
+                {% if product.available_weights %}
+                <div class="flex flex-wrap gap-1 mb-3">
+                    {% for weight in product.available_weights|slice:":3" %}
+                    <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">{{ weight }}</span>
+                    {% endfor %}
+                    {% if product.available_weights|length > 3 %}
+                    <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">+{{ product.available_weights|length|add:"-3" }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="flex items-center mb-3">
+                    <div class="flex text-yellow-400 text-sm">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star-half-alt"></i>
+                    </div>
+                    <span class="text-gray-500 text-sm ml-2">(4.5)</span>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-2xl font-bold text-red-600">₹{{ product.price }}</span>
+                    
+                    <div class="flex space-x-2">
+                        <!-- Wishlist Button -->
+                        <form action="{% url 'add_to_wishlist' product.id %}" method="POST">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-gray-200 hover:bg-red-100 text-gray-700 p-2 rounded-lg transition" title="Add to Wishlist">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </form>
+                        
+                        <!-- Add to Cart Button - Updated stock check -->
+                        {% with total_stock=product.get_total_stock %}
+                            {% if total_stock > 0 %}
+                            <form action="{% url 'add_to_cart' product.id %}" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition shadow-md" title="Add to Cart">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <button disabled class="bg-gray-400 text-white p-2 rounded-lg cursor-not-allowed" title="Out of Stock">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-16">
+            <i class="fas fa-box-open text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-2xl font-bold text-gray-500 mb-2">No products found</h3>
+            <p class="text-gray-400">Try searching with different keywords</p>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- View All Button -->
+    <div class="text-center mt-12">
+        <a href="{% url 'product_list' %}" class="inline-block bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-red-600 hover:text-white transition duration-300">
+            View All Products
+        </a>
+    </div>
+</div>
+
+
+<!-- CATEGORIES SECTION - Links to filtered product pages -->
+<div class="bg-gray-100 py-16">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Shop by Category</h2>
+            <p class="text-gray-600">Click on a category to see all products</p>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <!-- Weights Category -->
+            <a href="{% url 'product_list' %}?category=weights" class="bg-white rounded-lg p-6 text-center shadow hover:shadow-lg transition transform hover:-translate-y-1 border-l-4 border-red-600">
+                <span class="text-5xl mb-3 block">🏋️</span>
+                <h3 class="text-xl font-bold text-gray-800">Weights</h3>
+                <p class="text-gray-500 text-sm mt-2">Dumbbells, Barbells, Plates & More</p>
+            </a>
+            
+            <!-- Cardio Category -->
+            <a href="{% url 'product_list' %}?category=cardio" class="bg-white rounded-lg p-6 text-center shadow hover:shadow-lg transition transform hover:-translate-y-1 border-l-4 border-green-600">
+                <span class="text-5xl mb-3 block">🏃</span>
+                <h3 class="text-xl font-bold text-gray-800">Cardio</h3>
+                <p class="text-gray-500 text-sm mt-2">Treadmills, Bikes, Ellipticals & More</p>
+            </a>
+            
+            <!-- Accessories Category -->
+            <a href="{% url 'product_list' %}?category=accessories" class="bg-white rounded-lg p-6 text-center shadow hover:shadow-lg transition transform hover:-translate-y-1 border-l-4 border-blue-600">
+                <span class="text-5xl mb-3 block">🔧</span>
+                <h3 class="text-xl font-bold text-gray-800">Accessories</h3>
+                <p class="text-gray-500 text-sm mt-2">Gloves, Straps, Belts & More</p>
+            </a>
+        </div>
+    </div>
+</div>
+
+
+<!-- FEATURES SECTION -->
+<div class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="text-center">
+            <div class="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Premium Quality</h3>
+            <p class="text-gray-600">100% genuine products from top brands</p>
+        </div>
+        <div class="text-center">
+            <div class="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Fast Delivery</h3>
+            <p class="text-gray-600">Free shipping on orders above ₹999</p>
+        </div>
+        <div class="text-center">
+            <div class="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                </svg>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Secure Payment</h3>
+            <p class="text-gray-600">100% secure transactions</p>
+        </div>
+    </div>
+</div>
+
+<!-- NEWSLETTER -->
+<div class="bg-red-600 py-12">
+    <div class="max-w-2xl mx-auto text-center px-4">
+        <h3 class="text-2xl font-bold text-white mb-3">Subscribe to Our Newsletter</h3>
+        <p class="text-red-100 mb-5">Get updates on new products and special offers</p>
+        <form method="POST" action="{% url 'subscribe_newsletter' %}" class="flex flex-col sm:flex-row gap-3">
+            {% csrf_token %}
+            <input type="email" name="email" placeholder="Your email address" required 
+                   class="flex-1 px-4 py-3 rounded-lg focus:outline-none">
+            <button type="submit" class="bg-white text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+                Subscribe
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- FOOTER with Category Links -->
+<footer class="bg-gray-900 text-white py-10">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+                <h4 class="text-xl font-bold mb-4"><span class="text-red-600">GYM</span>KART</h4>
+                <p class="text-gray-400 text-sm">Your trusted partner in fitness since 2024.</p>
+            </div>
+            <div>
+                <h5 class="font-semibold mb-3">Quick Links</h5>
+                <ul class="text-gray-400 text-sm space-y-2">
+                    <li><a href="{% url 'home' %}" class="hover:text-white">Home</a></li>
+                    <li><a href="{% url 'product_list' %}" class="hover:text-white">All Products</a></li>
+                    <li><a href="{% url 'wishlist' %}" class="hover:text-white">Wishlist</a></li>
+                    <li><a href="{% url 'cart' %}" class="hover:text-white">Cart</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 class="font-semibold mb-3">Categories</h5>
+                <ul class="text-gray-400 text-sm space-y-2">
+                    <li><a href="{% url 'product_list' %}?category=weights" class="hover:text-white">Weights</a></li>
+                    <li><a href="{% url 'product_list' %}?category=cardio" class="hover:text-white">Cardio</a></li>
+                    <li><a href="{% url 'product_list' %}?category=accessories" class="hover:text-white">Accessories</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 class="font-semibold mb-3">Contact</h5>
+                <ul class="text-gray-400 text-sm space-y-2">
+                    <li>support@gymkart.com</li>
+                    <li>+91 98765 43210</li>
+                </ul>
+            </div>
+        </div>
+        <hr class="border-gray-800 my-6">
+        <p class="text-center text-gray-500 text-sm">&copy; 2024 GymKart. All rights reserved.</p>
+    </div>
+</footer>
+
+<!-- JAVASCRIPT ANIMATIONS -->
+<script>
+const images = [
+    "{% static 'images/gym1.jpg' %}",
+    "{% static 'images/gym2.jpg' %}",
+    "{% static 'images/gym3.jpg' %}",
+    "{% static 'images/gym4.jpg' %}"
+]
+
+const quotes = [
+    "The pain you feel today will be the strength you feel tomorrow. – Arnold Schwarzenegger",
+    "Discipline is the bridge between goals and accomplishment. – Jim Rohn",
+    "You don't have to be great to start, but you have to start to be great. – Zig Ziglar",
+    "I don't stop when I'm tired. I stop when I'm done. – David Goggins",
+    "If you think lifting is dangerous, try being weak.",
+    "Push harder than yesterday if you want a different tomorrow."
+]
+
+let imgIndex = 0
+let quoteIndex = 0
+const heroImage = document.getElementById("heroImage")
+const quote = document.getElementById("quote")
+
+function changeImage() {
+    heroImage.style.opacity = 0
+    setTimeout(() => {
+        imgIndex = (imgIndex + 1) % images.length
+        heroImage.src = images[imgIndex]
+        heroImage.style.opacity = 0.8
+    }, 400)
+}
+
+function changeQuote() {
+    quote.style.opacity = 0
+    setTimeout(() => {
+        quoteIndex = (quoteIndex + 1) % quotes.length
+        quote.innerText = quotes[quoteIndex]
+        quote.style.opacity = 1
+    }, 400)
+}
+
+setInterval(changeImage, 4000)
+setInterval(changeQuote, 3500)
+</script>
+
+{% endblock %}

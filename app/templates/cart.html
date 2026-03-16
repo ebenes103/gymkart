@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<!-- Navigation - Logo on Left, All Links on Right -->
+<!-- <nav class="bg-white shadow-lg px-10 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div>
+        <a href="{% url 'home' %}" class="text-3xl font-extrabold">
+            <span class="text-red-600">GYM</span><span class="text-gray-800">KART</span>
+        </a>
+    </div>
+
+    <div class="flex items-center space-x-8">
+        <a href="{% url 'home' %}" class="text-gray-700 hover:text-red-600 font-medium">Home</a>
+        <a href="{% url 'product_list' %}" class="text-gray-700 hover:text-red-600 font-medium">Products</a>
+        <a href="{% url 'wishlist' %}" class="text-gray-700 hover:text-red-600 font-medium">Wishlist</a>
+        <a href="{% url 'cart' %}" class="text-red-600 font-medium border-b-2 border-red-600">Cart</a>
+ Live Chat Link - Now toggles open/close
+<a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
+    <i class="fas fa-comment-dots mr-1"></i> Live Chat
+</a>
+        <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
+            Logout
+        </a>
+    </div>
+</nav> -->
+
+
+<div class="max-w-6xl mx-auto px-6 py-10">
+
+<h2 class="text-3xl font-bold mb-8 text-center">
+🛒 Your Shopping Cart
+</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+<!-- CART ITEMS -->
+
+<div class="lg:col-span-2">
+
+{% for item in cart_items %}
+
+<div class="flex items-center justify-between bg-white shadow-md rounded-xl p-5 mb-5 hover:shadow-lg transition">
+
+<div class="flex items-center gap-5">
+
+<!-- PRODUCT IMAGE -->
+
+<img src="{{ item.product.image.url }}"
+class="w-24 h-24 object-cover rounded-lg">
+
+<!-- PRODUCT INFO -->
+
+<div>
+
+<h3 class="text-lg font-semibold">
+{{ item.product.name }}
+</h3>
+
+<p class="text-gray-500 text-sm">
+Brand: {{ item.product.brand }}
+</p>
+
+<p class="text-gray-500 text-sm">
+Quantity: {{ item.quantity }}
+</p>
+
+<p class="text-red-600 font-bold mt-1">
+₹{{ item.total_price }}
+</p>
+
+</div>
+
+</div>
+
+<!-- REMOVE BUTTON -->
+
+<a href="{% url 'remove_from_cart' item.id %}"
+class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+
+Remove
+
+</a>
+
+</div>
+
+{% empty %}
+
+<div class="bg-white p-10 text-center shadow rounded-xl">
+
+<p class="text-gray-500 text-lg">
+Your cart is empty 🛒
+</p>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+
+<!-- CART SUMMARY -->
+
+<div class="bg-white shadow-md rounded-xl p-6 h-fit">
+
+<h3 class="text-xl font-semibold mb-6">
+Order Summary
+</h3>
+
+<div class="flex justify-between mb-3">
+
+<span>Items</span>
+<span>{{ cart_items|length }}</span>
+
+</div>
+
+<div class="flex justify-between mb-3">
+
+<span>Total Price</span>
+<span class="font-semibold">
+₹{{ total }}
+</span>
+
+</div>
+
+<hr class="my-4">
+
+<div class="flex justify-between text-lg font-bold mb-6">
+
+<span>Total</span>
+<span class="text-red-600">
+₹{{ total }}
+</span>
+
+</div>
+
+<button
+class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition">
+
+Proceed to Checkout
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Product - GymKart Seller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+
+<!-- Header -->
+<div class="bg-white shadow-md px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div class="flex items-center space-x-2">
+        <span class="text-2xl font-extrabold">
+            <span class="text-red-600">GYM</span><span class="text-gray-800">KART</span>
+        </span>
+        <span class="bg-gray-200 text-gray-600 text-sm px-3 py-1 rounded-full ml-4">Seller Panel</span>
+    </div>
+    
+    <a href="{% url 'seller_dashboard' %}" class="text-gray-600 hover:text-red-600">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Main Content -->
+<div class="max-w-4xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-2xl shadow-xl p-8">
+        
+        <!-- Header -->
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h2 class="text-3xl font-bold text-gray-800 flex items-center">
+                <i class="fas fa-plus-circle text-red-600 mr-3"></i>
+                Add New Product
+            </h2>
+            <p class="text-gray-500 mt-2">Fill in the details below to list your product</p>
+        </div>
+        
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %} rounded-lg">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Form -->
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-info-circle text-red-600 mr-2"></i>
+                    Basic Information
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Product ID <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.product_id }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Product Name <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.name }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Brand <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.brand }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Category <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.category }}
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Price (₹) <span class="text-red-600">*</span>
+                        </label>
+                        {{ form.price }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Description -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-align-left text-red-600 mr-2"></i>
+                    Description
+                </h3>
+                {{ form.description }}
+            </div>
+            
+            <!-- Weight Options & Stock - SIMPLIFIED -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-weight-hanging text-red-600 mr-2"></i>
+                    Weight Options & Stock Management
+                </h3>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-blue-700">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>For Weights Category Only:</strong> If your product has different weight options, fill these fields.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Available Weights <span class="text-gray-500">(comma separated)</span>
+                        </label>
+                        {{ form.available_weights_input }}
+                        <p class="text-gray-500 text-xs mt-1">Example: 2kg, 5kg, 10kg, 20kg</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Stock per Weight <span class="text-gray-500">(weight:quantity)</span>
+                        </label>
+                        {{ form.stock_per_weight_input }}
+                        <p class="text-gray-500 text-xs mt-1">Example: 2kg:10, 5kg:8, 10kg:5, 20kg:3</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Image -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-image text-red-600 mr-2"></i>
+                    Main Product Image
+                </h3>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-red-500 transition">
+                    {{ form.image }}
+                </div>
+            </div>
+            
+            <!-- Extra Images -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                    <i class="fas fa-images text-red-600 mr-2"></i>
+                    Extra Images (Up to 3)
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {{ formset.management_form }}
+                    {% for image_form in formset %}
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                        {{ image_form.image }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Submit Buttons -->
+            <div class="flex space-x-4 pt-4 border-t border-gray-200">
+                <button type="submit" class="bg-red-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-red-700 transition shadow-md flex items-center">
+                    <i class="fas fa-save mr-2"></i>
+                    Save Product
+                </button>
+                <a href="{% url 'seller_dashboard' %}" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

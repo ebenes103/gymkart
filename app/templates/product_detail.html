@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+
+<!-- Navigation - Logo on Left, All Links on Right -->
+<!-- <nav class="bg-white shadow-lg px-10 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div>
+        <a href="{% url 'home' %}" class="text-3xl font-extrabold">
+            <span class="text-red-600">GYM</span><span class="text-gray-800">KART</span>
+        </a>
+    </div>
+
+    <div class="flex items-center space-x-8">
+        <a href="{% url 'home' %}" class="text-gray-700 hover:text-red-600 font-medium">Home</a>
+        <a href="{% url 'product_list' %}" class="text-gray-700 hover:text-red-600 font-medium">Products</a>
+        <a href="{% url 'wishlist' %}" class="text-gray-700 hover:text-red-600 font-medium">Wishlist</a>
+        <a href="{% url 'cart' %}" class="text-gray-700 hover:text-red-600 font-medium">Cart</a>
+        Live Chat Link - Now toggles open/close
+<a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
+    </i> Live Chat
+</a>
+        <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
+            Logout
+        </a>
+    </div>
+</nav> -->
+
+<!-- Product Detail Section -->
+<div class="max-w-7xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
+            <!-- Product Images -->
+            <div>
+                <!-- Main Image -->
+                <div class="rounded-xl overflow-hidden mb-4 border">
+                    <img id="mainImage" src="{{ product.image.url }}" alt="{{ product.name }}" class="w-full h-96 object-cover">
+                </div>
+                
+                <!-- Extra Images -->
+                {% if product.extra_images.all %}
+                <div class="grid grid-cols-3 gap-4">
+                    {% for image in product.extra_images.all %}
+                    <div class="rounded-lg overflow-hidden border cursor-pointer hover:opacity-80 transition" onclick="document.getElementById('mainImage').src='{{ image.image.url }}'">
+                        <img src="{{ image.image.url }}" alt="{{ product.name }}" class="w-full h-24 object-cover">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Product Details -->
+            <div>
+                <!-- Breadcrumb -->
+                <div class="text-sm text-gray-500 mb-4">
+                    <a href="{% url 'home' %}" class="hover:text-red-600">Home</a> > 
+                    <a href="{% url 'product_list' %}?category={{ product.category }}" class="hover:text-red-600">{{ product.category|title }}</a> > 
+                    <span class="text-gray-700">{{ product.name }}</span>
+                </div>
+                
+                <!-- Product Name & Brand -->
+                <h1 class="text-4xl font-bold text-gray-800 mb-2">{{ product.name }}</h1>
+                <p class="text-gray-500 text-lg mb-4">Brand: <span class="font-semibold">{{ product.brand }}</span></p>
+                
+                <!-- Rating -->
+                <div class="flex items-center mb-4">
+                    <div class="flex text-yellow-400 text-lg">
+                        ★ ★ ★ ★ ★
+                    </div>
+                    <span class="text-gray-500 ml-2">(24 customer reviews)</span>
+                </div>
+                
+                <!-- Price -->
+                <div class="mb-6">
+                    <span class="text-4xl font-bold text-red-600">₹{{ product.price }}</span>
+                    <span class="text-gray-500 line-through ml-4">₹{{ product.price|add:"2000" }}</span>
+                    <span class="text-green-600 ml-4">Save ₹2,000</span>
+                </div>
+                
+                <!-- Stock Status -->
+                {% with total_stock=product.get_total_stock %}
+                <div class="mb-6">
+                    {% if total_stock == 0 %}
+                    <span class="bg-red-100 text-red-600 px-4 py-2 rounded-full font-semibold">Out of Stock</span>
+                    {% elif total_stock < 5 %}
+                    <span class="bg-red-100 text-red-600 px-4 py-2 rounded-full font-semibold animate-pulse">Only {{ total_stock }} units left! Hurry! 🔥</span>
+                    {% elif total_stock < 10 %}
+                    <span class="bg-yellow-100 text-yellow-600 px-4 py-2 rounded-full font-semibold">Low Stock - {{ total_stock }} available</span>
+                    {% else %}
+                    <span class="bg-green-100 text-green-600 px-4 py-2 rounded-full font-semibold">In Stock ({{ total_stock }} available)</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+                
+{% load static %}
+{% load custom_filters %}
+
+<!-- ... rest of your template ... -->
+
+<!-- Weight Selection (for weights category) -->
+{% if product.available_weights %}
+<div class="mb-6">
+    <h3 class="text-lg font-semibold text-gray-700 mb-3">Select Weight:</h3>
+    <div class="flex flex-wrap gap-3" id="weightButtons">
+        {% for weight in product.available_weights %}
+            <button type="button" 
+                    class="weight-btn px-6 py-3 rounded-lg font-semibold transition
+                           {% with stock=product.stock_per_weight|get_item:weight %}
+                               {% if stock == 0 %}
+                               bg-gray-200 text-gray-500 cursor-not-allowed
+                               {% else %}
+                               bg-gray-200 text-gray-700 hover:bg-red-600 hover:text-white
+                               {% endif %}
+                           {% endwith %}"
+                    data-weight="{{ weight }}"
+                    data-stock="{{ product.stock_per_weight|get_item:weight }}"
+                    {% with stock=product.stock_per_weight|get_item:weight %}
+                        {% if stock == 0 %}disabled{% endif %}>
+                        {{ weight }}
+                        {% if stock and stock < 5 and stock > 0 %}
+                        <span class="block text-xs text-red-500">Only {{ stock }} left</span>
+                        {% endif %}
+                    {% endwith %}
+            </button>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+                
+                <!-- Add to Cart Form -->
+                <form action="{% url 'add_to_cart' product.id %}" method="POST" id="addToCartForm" class="mb-8">
+                    {% csrf_token %}
+                    <input type="hidden" name="weight" id="selectedWeight" value="">
+                    
+                    <!-- Quantity Selector -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">Quantity:</h3>
+                        <div class="flex items-center space-x-4">
+                            <button type="button" class="bg-gray-200 text-gray-700 w-10 h-10 rounded-lg hover:bg-gray-300 text-xl font-bold" onclick="decrementQuantity()">-</button>
+                            <input type="number" name="quantity" id="quantity" value="1" min="1" max="99" class="w-20 text-center px-3 py-2 border rounded-lg">
+                            <button type="button" class="bg-gray-200 text-gray-700 w-10 h-10 rounded-lg hover:bg-gray-300 text-xl font-bold" onclick="incrementQuantity()">+</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex space-x-4">
+                        <button type="submit" id="addToCartBtn" class="flex-1 bg-red-600 text-white py-4 rounded-lg font-semibold hover:bg-red-700 transition shadow-md flex items-center justify-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <span>Add to Cart</span>
+                        </button>
+                        
+                        <form action="{% url 'add_to_wishlist' product.id %}" method="POST" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="bg-gray-200 text-gray-700 p-4 rounded-lg hover:bg-red-100 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </form>
+                
+                <!-- Product Description -->
+                <div class="border-t pt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Product Description</h3>
+                    <p class="text-gray-600 leading-relaxed">{{ product.description }}</p>
+                </div>
+                
+                <!-- Key Features -->
+                <div class="border-t mt-6 pt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Key Features</h3>
+                    <ul class="space-y-2 text-gray-600">
+                        <li class="flex items-start">
+                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Premium quality material for long-lasting durability
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Ergonomic design for comfortable grip
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Suitable for home and commercial gym use
+                        </li>
+                        <li class="flex items-start">
+                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            1 year manufacturer warranty
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Weight Selection and Quantity -->
+<script>
+// Weight selection functionality
+const weightButtons = document.querySelectorAll('.weight-btn');
+const selectedWeightInput = document.getElementById('selectedWeight');
+const selectedWeightDisplay = document.getElementById('selectedWeightDisplay');
+let selectedWeight = '';
+
+weightButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+        if (this.disabled) return;
+        
+        // Remove active class from all buttons
+        weightButtons.forEach(b => {
+            b.classList.remove('bg-red-600', 'text-white');
+            b.classList.add('bg-gray-200', 'text-gray-700');
+        });
+        
+        // Add active class to clicked button
+        this.classList.remove('bg-gray-200', 'text-gray-700');
+        this.classList.add('bg-red-600', 'text-white');
+        
+        // Set selected weight
+        selectedWeight = this.dataset.weight;
+        selectedWeightInput.value = selectedWeight;
+        selectedWeightDisplay.textContent = `Selected: ${selectedWeight}`;
+        
+        // Update max quantity based on stock
+        const stock = parseInt(this.dataset.stock);
+        const quantityInput = document.getElementById('quantity');
+        if (stock > 0) {
+            quantityInput.max = stock;
+            if (parseInt(quantityInput.value) > stock) {
+                quantityInput.value = stock;
+            }
+        }
+    });
+});
+
+// Quantity functions
+function incrementQuantity() {
+    const input = document.getElementById('quantity');
+    const max = input.max;
+    if (parseInt(input.value) < parseInt(max)) {
+        input.value = parseInt(input.value) + 1;
+    }
+}
+
+function decrementQuantity() {
+    const input = document.getElementById('quantity');
+    if (parseInt(input.value) > 1) {
+        input.value = parseInt(input.value) - 1;
+    }
+}
+
+// Form validation
+document.getElementById('addToCartForm')?.addEventListener('submit', function(e) {
+    {% if product.available_weights %}
+    if (!selectedWeight) {
+        e.preventDefault();
+        alert('Please select a weight option');
+    }
+    {% endif %}
+});
+</script>
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-white py-10 mt-10">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+                <h4 class="text-xl font-bold mb-4"><span class="text-red-600">GYM</span>KART</h4>
+                <p class="text-gray-400 text-sm">Your trusted partner in fitness since 2024.</p>
+            </div>
+            <div>
+                <h5 class="font-semibold mb-3">Quick Links</h5>
+                <ul class="text-gray-400 text-sm space-y-2">
+                    <li><a href="#" class="hover:text-white">About Us</a></li>
+                    <li><a href="#" class="hover:text-white">Contact</a></li>
+                    <li><a href="#" class="hover:text-white">FAQs</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 class="font-semibold mb-3">Categories</h5>
+                <ul class="text-gray-400 text-sm space-y-2">
+                    <li><a href="{% url 'product_list' %}?category=weights" class="hover:text-white">Weights</a></li>
+                    <li><a href="{% url 'product_list' %}?category=cardio" class="hover:text-white">Cardio</a></li>
+                    <li><a href="{% url 'product_list' %}?category=accessories" class="hover:text-white">Accessories</a></li>
+                </ul>
+            </div>
+            <div>
+                <h5 class="font-semibold mb-3">Contact</h5>
+                <ul class="text-gray-400 text-sm space-y-2">
+                    <li>support@gymkart.com</li>
+                    <li>+91 98765 43210</li>
+                </ul>
+            </div>
+        </div>
+        <hr class="border-gray-800 my-6">
+        <p class="text-center text-gray-500 text-sm">&copy; 2024 GymKart. All rights reserved.</p>
+    </div>
+</footer>
+
+{% endblock %}

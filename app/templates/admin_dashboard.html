@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<!-- Navigation -->
+<!-- <nav class="bg-white shadow-lg px-10 py-4 flex justify-between items-center sticky top-0 z-50">
+    <div>
+        <a href="{% url 'home' %}" class="text-3xl font-extrabold">
+            <span class="text-red-600">GYM</span><span class="text-gray-800">KART</span>
+        </a>
+    </div>
+
+    <div class="flex items-center space-x-8">
+        <a href="{% url 'home' %}" class="text-gray-700 hover:text-red-600 font-medium">Home</a>
+        <a href="{% url 'product_list' %}" class="text-gray-700 hover:text-red-600 font-medium">Products</a>
+        <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
+            Logout
+        </a>
+    </div>
+</nav> -->
+
+<!-- Main Content -->
+<div class="max-w-7xl mx-auto mt-10 px-6">
+
+    <!-- HEADER -->
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-800">
+            Admin Dashboard
+        </h1>
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-10">
+        <div class="bg-white shadow rounded-xl p-6">
+            <p class="text-gray-500">Pending Sellers</p>
+            <p class="text-3xl font-bold text-red-600">{{ pending_sellers|length }}</p>
+        </div>
+
+        <div class="bg-white shadow rounded-xl p-6">
+            <p class="text-gray-500">Approved Sellers</p>
+            <p class="text-3xl font-bold text-green-600">{{ approved_sellers }}</p>
+        </div>
+
+        <div class="bg-white shadow rounded-xl p-6">
+            <p class="text-gray-500">Total Buyers</p>
+            <p class="text-3xl font-bold text-blue-600">{{ total_buyers }}</p>
+        </div>
+
+        <div class="bg-white shadow rounded-xl p-6">
+            <p class="text-gray-500">Total Users</p>
+            <p class="text-3xl font-bold text-purple-600">{{ total_users }}</p>
+        </div>
+
+        <div class="bg-white shadow rounded-xl p-6">
+            <p class="text-gray-500">Newsletter</p>
+            <p class="text-3xl font-bold text-pink-600">{{ total_newsletters }}</p>
+        </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="flex flex-wrap gap-4 mb-6">
+        <button onclick="showPendingSellers()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition shadow-md">
+            Show Pending Sellers
+        </button>
+        <button onclick="showCurrentSellers()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-md">
+            Show Current Sellers
+        </button>
+        <button onclick="showCurrentBuyers()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
+            Show Current Buyers
+        </button>
+        <button onclick="showNewsletter()" class="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition shadow-md">
+            Show Newsletter Subscribers
+        </button>
+    </div>
+
+    <!-- PENDING SELLERS TABLE (Hidden by default) -->
+    <div id="pendingSellersTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
+        <h2 class="text-xl font-semibold mb-6">Pending Seller Approvals</h2>
+        <table class="w-full">
+            <thead>
+                <tr class="border-b text-gray-600">
+                    <th class="py-3 text-left">Username</th>
+                    <th class="py-3 text-left">Email</th>
+                    <th class="py-3 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in pending_sellers %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-4 font-medium">{{ profile.user.username }}</td>
+                    <td class="py-4">{{ profile.user.email }}</td>
+                    <td class="py-4 text-center space-x-2">
+                        <a href="{% url 'approve_seller' profile.user.id %}" 
+                           class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
+                            Approve
+                        </a>
+                        <a href="{% url 'reject_seller' profile.user.id %}"
+                           onclick="return confirm('Are you sure you want to reject this seller?')"
+                           class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                            Reject
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center py-6 text-gray-500">
+                        No pending sellers
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CURRENT SELLERS TABLE (Hidden by default) -->
+    <div id="currentSellersTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
+        <h2 class="text-xl font-semibold mb-6">Current Approved Sellers</h2>
+        <table class="w-full">
+            <thead>
+                <tr class="border-b text-gray-600">
+                    <th class="py-3 text-left">Username</th>
+                    <th class="py-3 text-left">Email</th>
+                    <th class="py-3 text-left">Joined Date</th>
+                    <th class="py-3 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                    {% if profile.role == 'seller' and profile.seller_approved %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-4 font-medium">{{ profile.user.username }}</td>
+                        <td class="py-4">{{ profile.user.email }}</td>
+                        <td class="py-4">{{ profile.user.date_joined|date:"M d, Y" }}</td>
+                        <td class="py-4 text-center">
+                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
+                                Active
+                            </span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-6 text-gray-500">
+                        No approved sellers yet
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- CURRENT BUYERS TABLE (Hidden by default) -->
+    <div id="currentBuyersTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
+        <h2 class="text-xl font-semibold mb-6">Current Buyers</h2>
+        <table class="w-full">
+            <thead>
+                <tr class="border-b text-gray-600">
+                    <th class="py-3 text-left">Username</th>
+                    <th class="py-3 text-left">Email</th>
+                    <th class="py-3 text-left">Joined Date</th>
+                    <th class="py-3 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for profile in profiles %}
+                    {% if profile.role == 'buyer' %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-4 font-medium">{{ profile.user.username }}</td>
+                        <td class="py-4">{{ profile.user.email }}</td>
+                        <td class="py-4">{{ profile.user.date_joined|date:"M d, Y" }}</td>
+                        <td class="py-4 text-center">
+                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
+                                Active
+                            </span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center py-6 text-gray-500">
+                        No buyers yet
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- NEWSLETTER TABLE (Hidden by default) -->
+    <div id="newsletterTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
+        <h2 class="text-xl font-semibold mb-6 flex items-center">
+            <span class="bg-pink-600 text-white px-3 py-1 rounded-full text-sm mr-3">NEW</span>
+            Newsletter Subscribers ({{ total_newsletters }})
+        </h2>
+        
+        <div class="mb-4 flex justify-between items-center">
+            <p class="text-gray-600">Recent subscribers to your newsletter</p>
+            <!-- <button onclick="exportEmails()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm">
+                Export All Emails
+            </button> -->
+        </div>
+        
+        <table class="w-full">
+            <thead>
+                <tr class="border-b text-gray-600">
+                    <th class="py-3 text-left">Email</th>
+                    <th class="py-3 text-left">Subscribed Date</th>
+                    <th class="py-3 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subscriber in recent_newsletters %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="py-4 font-medium">{{ subscriber.email }}</td>
+                    <td class="py-4">{{ subscriber.subscribed_at|date:"M d, Y" }}</td>
+                    <td class="py-4 text-center">
+                        <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
+                            Active
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center py-6 text-gray-500">
+                        No subscribers yet
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- JavaScript to toggle tables -->
+<script>
+function showPendingSellers() {
+    hideAllTables();
+    document.getElementById('pendingSellersTable').classList.remove('hidden');
+}
+
+function showCurrentSellers() {
+    hideAllTables();
+    document.getElementById('currentSellersTable').classList.remove('hidden');
+}
+
+function showCurrentBuyers() {
+    hideAllTables();
+    document.getElementById('currentBuyersTable').classList.remove('hidden');
+}
+
+function showNewsletter() {
+    hideAllTables();
+    document.getElementById('newsletterTable').classList.remove('hidden');
+}
+
+function hideAllTables() {
+    document.getElementById('pendingSellersTable').classList.add('hidden');
+    document.getElementById('currentSellersTable').classList.add('hidden');
+    document.getElementById('currentBuyersTable').classList.add('hidden');
+    document.getElementById('newsletterTable').classList.add('hidden');
+}
+
+function exportEmails() {
+    // This will collect all emails and create a download
+    let emails = [];
+    {% for subscriber in recent_newsletters %}
+        emails.push("{{ subscriber.email }}");
+    {% endfor %}
+    
+    if (emails.length === 0) {
+        alert('No emails to export');
+        return;
+    }
+    
+    const blob = new Blob([emails.join('\n')], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'newsletter_emails.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+</script>
+
+{% endblock %}
