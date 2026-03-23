@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="max-w-2xl mx-auto px-4 py-10">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="bg-red-600 px-6 py-4">
+            <h1 class="text-2xl font-bold text-white">Cancel Order & Request Refund</h1>
+        </div>
+        
+        <div class="p-6">
+            <!-- Order Summary -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <h2 class="font-semibold text-gray-800 mb-3">Order Summary</h2>
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Order ID:</span>
+                    <span class="font-medium">{{ order.order_id }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Order Date:</span>
+                    <span>{{ order.created_at|date:"M d, Y" }}</span>
+                </div>
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-600">Payment Method:</span>
+                    <span class="font-medium">
+                        {% if order.payment_method == 'upi' %}
+                            <i class="fab fa-google-pay text-blue-600 mr-1"></i> UPI
+                        {% else %}
+                            <i class="fas fa-credit-card text-purple-600 mr-1"></i> Card
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="flex justify-between pt-2 border-t mt-2">
+                    <span class="font-semibold">Total Amount:</span>
+                    <span class="font-bold text-red-600 text-xl">₹{{ order.total_amount }}</span>
+                </div>
+            </div>
+            
+            <!-- Refund Info -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                    <div class="text-sm text-blue-800">
+                        <p class="font-semibold mb-1">Refund Information</p>
+                        <p>Amount ₹{{ order.total_amount }} will be refunded to your original payment method.</p>
+                        <p>Please provide the details below to process your refund.</p>
+                        <p class="mt-2">Refund will be processed within 3-5 business days.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Refund Form -->
+            <form method="POST" action="{% url 'request_refund' order.id %}">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Reason for Cancellation (Optional)</label>
+                    <textarea name="refund_reason" rows="3" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Tell us why you're cancelling..."></textarea>
+                </div>
+                
+                {% if order.payment_method == 'upi' %}
+                <!-- UPI Refund Details -->
+                <div class="border-t pt-4 mt-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">UPI Refund Details</h3>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">UPI ID *</label>
+                        <input type="text" name="upi_id" required placeholder="username@okhdfcbank" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <p class="text-xs text-gray-500 mt-1">Enter the UPI ID linked to your payment</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if order.payment_method == 'card' %}
+                <!-- Card/Bank Refund Details -->
+                <div class="border-t pt-4 mt-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">Bank Account Details for Refund</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Account Holder Name *</label>
+                            <input type="text" name="account_holder_name" required placeholder="Full name as per bank account" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Bank Name *</label>
+                            <input type="text" name="bank_name" required placeholder="e.g., State Bank of India" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Account Number *</label>
+                            <input type="text" name="account_number" required placeholder="Your account number" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">IFSC Code *</label>
+                            <input type="text" name="ifsc_code" required placeholder="e.g., SBIN0001234" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Card Last 4 Digits (Optional)</label>
+                            <input type="text" name="card_last4" placeholder="1234" maxlength="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500">
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="mt-6 flex space-x-4">
+                    <button type="submit" class="flex-1 bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+                        Confirm Cancellation & Request Refund
+                    </button>
+                    <a href="{% url 'order_detail' order.id %}" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition text-center">
+                        Go Back
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

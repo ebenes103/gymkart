@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import Product, ProductImage
+from .models import Product, ProductImage, ProductRating
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -9,6 +9,19 @@ class RegisterForm(UserCreationForm):
     class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2']
+
+class ProductRatingForm(forms.ModelForm):
+    class Meta:
+        model = ProductRating
+        fields = ['rating', 'review']
+        widgets = {
+            'rating': forms.RadioSelect(attrs={'class': 'rating-radio hidden'}),
+            'review': forms.Textarea(attrs={
+                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500',
+                'rows': 4,
+                'placeholder': 'Share your experience with this product...'
+            }),
+        }
 
 class ProductForm(forms.ModelForm):
     available_weights_input = forms.CharField(

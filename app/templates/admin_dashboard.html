@@ -25,263 +25,318 @@
 
     <!-- HEADER -->
     <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">
-            Admin Dashboard
-        </h1>
+        <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
     </div>
 
     <!-- STATS CARDS -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-10">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
         <div class="bg-white shadow rounded-xl p-6">
             <p class="text-gray-500">Pending Sellers</p>
             <p class="text-3xl font-bold text-red-600">{{ pending_sellers|length }}</p>
         </div>
-
         <div class="bg-white shadow rounded-xl p-6">
             <p class="text-gray-500">Approved Sellers</p>
             <p class="text-3xl font-bold text-green-600">{{ approved_sellers }}</p>
         </div>
-
         <div class="bg-white shadow rounded-xl p-6">
             <p class="text-gray-500">Total Buyers</p>
             <p class="text-3xl font-bold text-blue-600">{{ total_buyers }}</p>
         </div>
-
         <div class="bg-white shadow rounded-xl p-6">
-            <p class="text-gray-500">Total Users</p>
-            <p class="text-3xl font-bold text-purple-600">{{ total_users }}</p>
-        </div>
-
-        <div class="bg-white shadow rounded-xl p-6">
-            <p class="text-gray-500">Newsletter</p>
-            <p class="text-3xl font-bold text-pink-600">{{ total_newsletters }}</p>
+            <p class="text-gray-500">Pending Complaints</p>
+            <p class="text-3xl font-bold text-orange-600">{{ pending_complaints_count }}</p>
         </div>
     </div>
 
-    <!-- ACTION BUTTONS -->
-    <div class="flex flex-wrap gap-4 mb-6">
-        <button onclick="showPendingSellers()" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition shadow-md">
-            Show Pending Sellers
+    <!-- Tabs Navigation -->
+    <div class="flex border-b border-gray-200 mb-6">
+        <button onclick="showTab('pending-sellers')" id="tab-pending-sellers-btn" class="px-6 py-3 text-red-600 border-b-2 border-red-600 font-semibold transition">
+            <i class="fas fa-clock mr-2"></i> Pending Sellers
         </button>
-        <button onclick="showCurrentSellers()" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-md">
-            Show Current Sellers
+        <button onclick="showTab('approved-sellers')" id="tab-approved-sellers-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-check-circle mr-2"></i> Approved Sellers
         </button>
-        <button onclick="showCurrentBuyers()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
-            Show Current Buyers
+        <button onclick="showTab('buyers')" id="tab-buyers-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-users mr-2"></i> Buyers
         </button>
-        <button onclick="showNewsletter()" class="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition shadow-md">
-            Show Newsletter Subscribers
+        <button onclick="showTab('complaints')" id="tab-complaints-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-file-alt mr-2"></i> Complaints
+            {% if pending_complaints_count > 0 %}
+            <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-1">{{ pending_complaints_count }}</span>
+            {% endif %}
+        </button>
+        <button onclick="showTab('newsletter')" id="tab-newsletter-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-envelope mr-2"></i> Newsletter
         </button>
     </div>
 
-    <!-- PENDING SELLERS TABLE (Hidden by default) -->
-    <div id="pendingSellersTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
-        <h2 class="text-xl font-semibold mb-6">Pending Seller Approvals</h2>
-        <table class="w-full">
-            <thead>
-                <tr class="border-b text-gray-600">
-                    <th class="py-3 text-left">Username</th>
-                    <th class="py-3 text-left">Email</th>
-                    <th class="py-3 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for profile in pending_sellers %}
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="py-4 font-medium">{{ profile.user.username }}</td>
-                    <td class="py-4">{{ profile.user.email }}</td>
-                    <td class="py-4 text-center space-x-2">
-                        <a href="{% url 'approve_seller' profile.user.id %}" 
-                           class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">
-                            Approve
-                        </a>
-                        <a href="{% url 'reject_seller' profile.user.id %}"
-                           onclick="return confirm('Are you sure you want to reject this seller?')"
-                           class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
-                            Reject
-                        </a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" class="text-center py-6 text-gray-500">
-                        No pending sellers
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- CURRENT SELLERS TABLE (Hidden by default) -->
-    <div id="currentSellersTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
-        <h2 class="text-xl font-semibold mb-6">Current Approved Sellers</h2>
-        <table class="w-full">
-            <thead>
-                <tr class="border-b text-gray-600">
-                    <th class="py-3 text-left">Username</th>
-                    <th class="py-3 text-left">Email</th>
-                    <th class="py-3 text-left">Joined Date</th>
-                    <th class="py-3 text-center">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for profile in profiles %}
-                    {% if profile.role == 'seller' and profile.seller_approved %}
+    <!-- PENDING SELLERS TABLE -->
+    <div id="pending-sellers-tab" class="tab-content">
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-6">Pending Seller Approvals</h2>
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b text-gray-600">
+                        <th class="py-3 text-left">Username</th>
+                        <th class="py-3 text-left">Email</th>
+                        <th class="py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in pending_sellers %}
                     <tr class="border-b hover:bg-gray-50">
                         <td class="py-4 font-medium">{{ profile.user.username }}</td>
                         <td class="py-4">{{ profile.user.email }}</td>
-                        <td class="py-4">{{ profile.user.date_joined|date:"M d, Y" }}</td>
-                        <td class="py-4 text-center">
-                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
-                                Active
-                            </span>
+                        <td class="py-4 text-center space-x-2">
+                            <a href="{% url 'approve_seller' profile.user.id %}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition">Approve</a>
+                            <a href="{% url 'reject_seller' profile.user.id %}" onclick="return confirm('Are you sure you want to reject this seller?')" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">Reject</a>
                         </td>
                     </tr>
-                    {% endif %}
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center py-6 text-gray-500">
-                        No approved sellers yet
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- CURRENT BUYERS TABLE (Hidden by default) -->
-    <div id="currentBuyersTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
-        <h2 class="text-xl font-semibold mb-6">Current Buyers</h2>
-        <table class="w-full">
-            <thead>
-                <tr class="border-b text-gray-600">
-                    <th class="py-3 text-left">Username</th>
-                    <th class="py-3 text-left">Email</th>
-                    <th class="py-3 text-left">Joined Date</th>
-                    <th class="py-3 text-center">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for profile in profiles %}
-                    {% if profile.role == 'buyer' %}
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="py-4 font-medium">{{ profile.user.username }}</td>
-                        <td class="py-4">{{ profile.user.email }}</td>
-                        <td class="py-4">{{ profile.user.date_joined|date:"M d, Y" }}</td>
-                        <td class="py-4 text-center">
-                            <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
-                                Active
-                            </span>
-                        </td>
-                    </tr>
-                    {% endif %}
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="text-center py-6 text-gray-500">
-                        No buyers yet
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- NEWSLETTER TABLE (Hidden by default) -->
-    <div id="newsletterTable" class="bg-white shadow-lg rounded-xl p-6 hidden">
-        <h2 class="text-xl font-semibold mb-6 flex items-center">
-            <span class="bg-pink-600 text-white px-3 py-1 rounded-full text-sm mr-3">NEW</span>
-            Newsletter Subscribers ({{ total_newsletters }})
-        </h2>
-        
-        <div class="mb-4 flex justify-between items-center">
-            <p class="text-gray-600">Recent subscribers to your newsletter</p>
-            <!-- <button onclick="exportEmails()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm">
-                Export All Emails
-            </button> -->
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center py-6 text-gray-500">No pending sellers</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        
-        <table class="w-full">
-            <thead>
-                <tr class="border-b text-gray-600">
-                    <th class="py-3 text-left">Email</th>
-                    <th class="py-3 text-left">Subscribed Date</th>
-                    <th class="py-3 text-center">Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for subscriber in recent_newsletters %}
-                <tr class="border-b hover:bg-gray-50">
-                    <td class="py-4 font-medium">{{ subscriber.email }}</td>
-                    <td class="py-4">{{ subscriber.subscribed_at|date:"M d, Y" }}</td>
-                    <td class="py-4 text-center">
-                        <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">
-                            Active
-                        </span>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" class="text-center py-6 text-gray-500">
-                        No subscribers yet
-                    </td>
-                </tr>
+    </div>
+
+    <!-- APPROVED SELLERS TABLE -->
+    <div id="approved-sellers-tab" class="tab-content hidden">
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-6">Approved Sellers</h2>
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b text-gray-600">
+                        <th class="py-3 text-left">Username</th>
+                        <th class="py-3 text-left">Email</th>
+                        <th class="py-3 text-left">Joined Date</th>
+                        <th class="py-3 text-center">Products</th>
+                        <th class="py-3 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in profiles %}
+                        {% if profile.role == 'seller' and profile.seller_approved %}
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-4 font-medium">{{ profile.user.username }}</td>
+                            <td class="py-4">{{ profile.user.email }}</td>
+                            <td class="py-4">{{ profile.user.date_joined|date:"M d, Y" }}</td>
+                            <td class="py-4 text-center">{{ profile.user.product_set.count }}</td>
+                            <td class="py-4 text-center"><span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">Active</span></td>
+                        </tr>
+                        {% endif %}
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-6 text-gray-500">No approved sellers yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- BUYERS TABLE -->
+    <div id="buyers-tab" class="tab-content hidden">
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-6">Buyers</h2>
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b text-gray-600">
+                        <th class="py-3 text-left">Username</th>
+                        <th class="py-3 text-left">Email</th>
+                        <th class="py-3 text-left">Joined Date</th>
+                        <th class="py-3 text-center">Orders</th>
+                        <th class="py-3 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profile in profiles %}
+                        {% if profile.role == 'buyer' %}
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="py-4 font-medium">{{ profile.user.username }}</td>
+                            <td class="py-4">{{ profile.user.email }}</td>
+                            <td class="py-4">{{ profile.user.date_joined|date:"M d, Y" }}</td>
+                            <td class="py-4 text-center">{{ profile.user.orders.count }}</td>
+                            <td class="py-4 text-center"><span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">Active</span></td>
+                        </tr>
+                        {% endif %}
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-6 text-gray-500">No buyers yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- COMPLAINTS TABLE -->
+    <div id="complaints-tab" class="tab-content hidden">
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-6 flex items-center">
+                <i class="fas fa-gavel mr-2 text-red-600"></i>
+                Customer Complaints
+                {% if pending_complaints_count > 0 %}
+                <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-2">{{ pending_complaints_count }} Pending</span>
+                {% endif %}
+            </h2>
+            
+            {% if complaints %}
+            <div class="space-y-6">
+                {% for complaint in complaints %}
+                <div class="border rounded-lg overflow-hidden {% if complaint.status == 'pending' %}border-yellow-400 bg-yellow-50{% elif complaint.status == 'resolved' %}border-green-400 bg-green-50{% else %}border-gray-200{% endif %}">
+                    <div class="p-5">
+                        <div class="flex flex-wrap justify-between items-start mb-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Complaint ID</p>
+                                <p class="font-bold text-lg">#{{ complaint.id }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Filed By</p>
+                                <p class="font-semibold">{{ complaint.user.username }}</p>
+                                <p class="text-xs text-gray-500">{{ complaint.user.email }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Against Seller</p>
+                                <p class="font-semibold text-red-600">{{ complaint.seller.username }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Date</p>
+                                <p>{{ complaint.created_at|date:"M d, Y" }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Status</p>
+                                <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold 
+                                    {% if complaint.status == 'pending' %}bg-yellow-100 text-yellow-600
+                                    {% elif complaint.status == 'investigating' %}bg-blue-100 text-blue-600
+                                    {% elif complaint.status == 'resolved' %}bg-green-100 text-green-600
+                                    {% else %}bg-red-100 text-red-600{% endif %}">
+                                    {{ complaint.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="text-sm font-semibold text-gray-700">Complaint Type</p>
+                                <p class="text-sm">{{ complaint.get_complaint_type_display }}</p>
+                            </div>
+                            {% if complaint.order %}
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="text-sm font-semibold text-gray-700">Order ID</p>
+                                <p class="text-sm">{{ complaint.order.order_id }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="bg-gray-50 p-3 rounded-lg mb-4">
+                            <p class="text-sm font-semibold text-gray-700">Description</p>
+                            <p class="text-sm text-gray-600">{{ complaint.description }}</p>
+                        </div>
+                        
+                        {% if complaint.image %}
+                        <div class="mb-4">
+                            <a href="{{ complaint.image.url }}" target="_blank" class="text-blue-500 text-sm hover:underline">
+                                <i class="fas fa-image mr-1"></i> View Supporting Image
+                            </a>
+                        </div>
+                        {% endif %}
+                        
+                        {% if complaint.status == 'pending' %}
+                        <form method="POST" action="{% url 'resolve_complaint' complaint.id %}" class="mt-4 pt-4 border-t">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Admin Remark *</label>
+                                <textarea name="admin_remark" rows="2" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Enter your decision remarks..."></textarea>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <button type="submit" name="action" value="approve_buyer" onclick="return confirm('Approve in buyer\'s favor? This will warn the seller.')" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg transition">
+                                    <i class="fas fa-check-circle mr-1"></i> Approve (Buyer's Favor)
+                                </button>
+                                <button type="submit" name="action" value="approve_seller" onclick="return confirm('Approve in seller\'s favor? The buyer will be notified.')" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg transition">
+                                    <i class="fas fa-shield-alt mr-1"></i> Approve (Seller's Favor)
+                                </button>
+                                <button type="submit" name="action" value="remove_seller" onclick="return confirm('WARNING: This will permanently remove the seller from the platform! Are you sure?')" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg transition">
+                                    <i class="fas fa-ban mr-1"></i> Remove Seller
+                                </button>
+                            </div>
+                        </form>
+                        {% elif complaint.status == 'resolved' %}
+                        <div class="mt-4 pt-4 border-t bg-green-50 p-3 rounded-lg">
+                            <p class="text-sm font-semibold text-green-800">Resolution Remarks</p>
+                            <p class="text-sm text-green-700">{{ complaint.admin_remark }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Resolved on: {{ complaint.resolved_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        {% elif complaint.status == 'rejected' %}
+                        <div class="mt-4 pt-4 border-t bg-red-50 p-3 rounded-lg">
+                            <p class="text-sm font-semibold text-red-800">Rejection Remarks</p>
+                            <p class="text-sm text-red-700">{{ complaint.admin_remark }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <i class="fas fa-check-circle text-5xl text-gray-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-500 mb-2">No Complaints</h3>
+                <p class="text-gray-400">All customer complaints have been resolved</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- NEWSLETTER TABLE -->
+    <div id="newsletter-tab" class="tab-content hidden">
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold mb-6">Newsletter Subscribers ({{ total_newsletters }})</h2>
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b text-gray-600">
+                        <th class="py-3 text-left">Email</th>
+                        <th class="py-3 text-left">Subscribed Date</th>
+                        <th class="py-3 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subscriber in recent_newsletters %}
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-4 font-medium">{{ subscriber.email }}</td>
+                        <td class="py-4">{{ subscriber.subscribed_at|date:"M d, Y" }}</td>
+                        <td class="py-4 text-center"><span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm">Active</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center py-6 text-gray-500">No subscribers yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
-<!-- JavaScript to toggle tables -->
 <script>
-function showPendingSellers() {
-    hideAllTables();
-    document.getElementById('pendingSellersTable').classList.remove('hidden');
-}
-
-function showCurrentSellers() {
-    hideAllTables();
-    document.getElementById('currentSellersTable').classList.remove('hidden');
-}
-
-function showCurrentBuyers() {
-    hideAllTables();
-    document.getElementById('currentBuyersTable').classList.remove('hidden');
-}
-
-function showNewsletter() {
-    hideAllTables();
-    document.getElementById('newsletterTable').classList.remove('hidden');
-}
-
-function hideAllTables() {
-    document.getElementById('pendingSellersTable').classList.add('hidden');
-    document.getElementById('currentSellersTable').classList.add('hidden');
-    document.getElementById('currentBuyersTable').classList.add('hidden');
-    document.getElementById('newsletterTable').classList.add('hidden');
-}
-
-function exportEmails() {
-    // This will collect all emails and create a download
-    let emails = [];
-    {% for subscriber in recent_newsletters %}
-        emails.push("{{ subscriber.email }}");
-    {% endfor %}
+function showTab(tabName) {
+    // Hide all tabs
+    document.getElementById('pending-sellers-tab').classList.add('hidden');
+    document.getElementById('approved-sellers-tab').classList.add('hidden');
+    document.getElementById('buyers-tab').classList.add('hidden');
+    document.getElementById('complaints-tab').classList.add('hidden');
+    document.getElementById('newsletter-tab').classList.add('hidden');
     
-    if (emails.length === 0) {
-        alert('No emails to export');
-        return;
+    // Reset button styles
+    const buttons = ['pending-sellers', 'approved-sellers', 'buyers', 'complaints', 'newsletter'];
+    buttons.forEach(btn => {
+        const el = document.getElementById(`tab-${btn}-btn`);
+        if (el) {
+            el.classList.remove('text-red-600', 'border-red-600');
+            el.classList.add('text-gray-600');
+        }
+    });
+    
+    // Show selected tab
+    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+    const activeBtn = document.getElementById(`tab-${tabName}-btn`);
+    if (activeBtn) {
+        activeBtn.classList.remove('text-gray-600');
+        activeBtn.classList.add('text-red-600', 'border-b-2', 'border-red-600');
     }
-    
-    const blob = new Blob([emails.join('\n')], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'newsletter_emails.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
 }
 </script>
 

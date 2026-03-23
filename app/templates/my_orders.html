@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="max-w-7xl mx-auto px-4 py-10">
+    <h1 class="text-3xl font-bold text-gray-800 mb-8">My Orders</h1>
+    
+    <!-- Tabs Navigation -->
+    <div class="flex flex-wrap border-b border-gray-200 mb-6">
+        <button onclick="showTab('active')" id="tab-active-btn" class="px-6 py-3 text-red-600 border-b-2 border-red-600 font-semibold transition">
+            <i class="fas fa-shopping-bag mr-2"></i>Active Orders
+            {% if active_orders_count > 0 %}
+            <span class="bg-red-500 text-white text-xs rounded-full px-2 py-1 ml-1">{{ active_orders_count }}</span>
+            {% endif %}
+        </button>
+        <button onclick="showTab('cancelled')" id="tab-cancelled-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-ban mr-2"></i>Cancelled Orders
+            {% if cancelled_orders_count > 0 %}
+            <span class="bg-gray-500 text-white text-xs rounded-full px-2 py-1 ml-1">{{ cancelled_orders_count }}</span>
+            {% endif %}
+        </button>
+        <button onclick="showTab('returns')" id="tab-returns-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-undo-alt mr-2"></i>Returns
+            {% if returns_count > 0 %}
+            <span class="bg-yellow-500 text-white text-xs rounded-full px-2 py-1 ml-1">{{ returns_count }}</span>
+            {% endif %}
+        </button>
+        <button onclick="showTab('refunds')" id="tab-refunds-btn" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold transition">
+            <i class="fas fa-money-bill-wave mr-2"></i>Refunds
+            {% if refunds_count > 0 %}
+            <span class="bg-purple-500 text-white text-xs rounded-full px-2 py-1 ml-1">{{ refunds_count }}</span>
+            {% endif %}
+        </button>
+        <a href="{% url 'my_complaints' %}" class="px-6 py-3 text-gray-600 hover:text-red-600 font-semibold">
+            <i class="fas fa-file-alt mr-2"></i>Complaints
+        </a>
+    </div>
+    
+    <!-- Active Orders Tab -->
+    <div id="active-tab" class="tab-content">
+        {% if active_orders %}
+        <div class="space-y-4">
+            {% for order in active_orders %}
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition">
+                <div class="p-6">
+                    <div class="flex flex-wrap justify-between items-start mb-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Order ID</p>
+                            <p class="font-bold text-lg">{{ order.order_id }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Order Date</p>
+                            <p>{{ order.created_at|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Amount</p>
+                            <p class="text-xl font-bold text-red-600">₹{{ order.total_amount }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold 
+                                {% if order.order_status == 'pending' %}bg-yellow-100 text-yellow-600
+                                {% elif order.order_status == 'confirmed' %}bg-blue-100 text-blue-600
+                                {% elif order.order_status == 'packed' %}bg-purple-100 text-purple-600
+                                {% elif order.order_status == 'shipped' %}bg-indigo-100 text-indigo-600
+                                {% elif order.order_status == 'out_for_delivery' %}bg-orange-100 text-orange-600
+                                {% elif order.order_status == 'delivered' %}bg-green-100 text-green-600{% endif %}">
+                                {{ order.get_order_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between items-center">
+                            <div class="space-y-1">
+                                {% for item in order.items.all|slice:":3" %}
+                                <div class="flex items-center justify-between gap-4">
+                                    <p class="text-sm text-gray-600">{{ item.quantity }}x {{ item.product.name }} ({{ item.weight|default:"Standard" }})</p>
+                                    {% if order.order_status == 'delivered' %}
+                                    {% with days_since=order.updated_at|timesince %}
+                                    {% if order.updated_at|date:"U"|add:"604800" > now|date:"U" %}
+                                    <a href="{% url 'request_return' order.id item.product.id %}" class="text-sm text-blue-500 hover:text-blue-600">Return</a>
+                                    {% endif %}
+                                    {% endwith %}
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="flex space-x-3">
+                                <a href="{% url 'order_detail' order.id %}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition text-sm">Track Order</a>
+                                {% if order.order_status in 'pending,confirmed' %}
+                                    {% if order.payment_method == 'cod' %}
+                                    <a href="{% url 'cancel_order' order.id %}" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm" onclick="return confirm('Cancel this order?')">Cancel</a>
+                                    {% else %}
+                                    <a href="{% url 'request_refund' order.id %}" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition text-sm">Cancel & Refund</a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+            <i class="fas fa-shopping-bag text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-500 mb-2">No Active Orders</h2>
+            <p class="text-gray-400">Start shopping to see your orders here</p>
+            <a href="{% url 'product_list' %}" class="mt-4 inline-block bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition">Shop Now</a>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Cancelled Orders Tab -->
+    <div id="cancelled-tab" class="tab-content hidden">
+        {% if cancelled_orders %}
+        <div class="space-y-4">
+            {% for order in cancelled_orders %}
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6 bg-gray-50">
+                    <div class="flex flex-wrap justify-between items-start mb-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Order ID</p>
+                            <p class="font-bold text-lg">{{ order.order_id }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Cancelled On</p>
+                            <p>{{ order.updated_at|date:"M d, Y" }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Amount</p>
+                            <p class="text-xl font-bold text-red-600">₹{{ order.total_amount }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="bg-red-100 text-red-600 px-3 py-1 rounded-full text-sm font-semibold">Cancelled</span>
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <p class="text-sm text-gray-500">Items Cancelled:</p>
+                        {% for item in order.items.all %}
+                        <p class="text-sm text-gray-600 mt-1">{{ item.quantity }}x {{ item.product.name }} ({{ item.weight|default:"Standard" }})</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+            <i class="fas fa-ban text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-500 mb-2">No Cancelled Orders</h2>
+            <p class="text-gray-400">You haven't cancelled any orders yet</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Returns Tab -->
+    <div id="returns-tab" class="tab-content hidden">
+        {% if returns %}
+        <div class="space-y-4">
+            {% for return_request in returns %}
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6">
+                    <div class="flex flex-wrap justify-between items-start mb-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Return ID</p>
+                            <p class="font-bold text-lg">#{{ return_request.id }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Order ID</p>
+                            <p>{{ return_request.order.order_id }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Product</p>
+                            <p>{{ return_request.product.name }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Return Type</p>
+                            <p>{{ return_request.get_return_type_display }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold 
+                                {% if return_request.status == 'pending' %}bg-yellow-100 text-yellow-600
+                                {% elif return_request.status == 'approved' %}bg-blue-100 text-blue-600
+                                {% elif return_request.status == 'completed' %}bg-green-100 text-green-600
+                                {% else %}bg-red-100 text-red-600{% endif %}">
+                                {{ return_request.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded-lg mb-2">
+                        <p class="text-sm text-gray-600"><strong>Reason:</strong> {{ return_request.reason }}</p>
+                    </div>
+                    {% if return_request.status == 'rejected' %}
+                    <div class="bg-red-50 p-3 rounded-lg mt-2 border-l-4 border-red-500">
+                        <p class="text-sm font-semibold text-red-800">Rejection Reason</p>
+                        <p class="text-sm text-red-700">{{ return_request.rejection_reason|default:"No reason provided" }}</p>
+                    </div>
+                    {% endif %}
+                    {% if return_request.status == 'approved' %}
+                    <div class="bg-green-50 p-3 rounded-lg mt-2">
+                        <p class="text-sm text-green-800">Return approved! Your {{ return_request.get_return_type_display|lower }} is being processed.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+            <i class="fas fa-undo-alt text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-500 mb-2">No Return Requests</h2>
+            <p class="text-gray-400">You haven't requested any returns yet</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Refunds Tab -->
+    <!-- Refunds Tab -->
+    <div id="refunds-tab" class="tab-content hidden">
+        {% if refunds %}
+        <div class="space-y-4">
+            {% for refund in refunds %}
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6">
+                    <div class="flex flex-wrap justify-between items-start mb-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Refund ID</p>
+                            <p class="font-bold text-lg">#{{ refund.id }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Order ID</p>
+                            <p>{{ refund.order.order_id }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Amount</p>
+                            <p class="text-xl font-bold text-red-600">₹{{ refund.amount }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Payment Method</p>
+                            <p class="font-semibold">
+                                {% if refund.payment_method == 'upi' %}
+                                    <i class="fab fa-google-pay text-blue-600"></i> UPI
+                                {% else %}
+                                    <i class="fas fa-credit-card text-purple-600"></i> Card
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Status</p>
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold 
+                                {% if refund.status == 'pending' %}bg-yellow-100 text-yellow-600
+                                {% elif refund.status == 'approved' %}bg-blue-100 text-blue-600
+                                {% elif refund.status == 'processing' %}bg-purple-100 text-purple-600
+                                {% elif refund.status == 'completed' %}bg-green-100 text-green-600
+                                {% else %}bg-red-100 text-red-600{% endif %}">
+                                {{ refund.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-3 rounded-lg mb-3">
+                        <p class="text-sm font-semibold text-gray-700 mb-1">Your Reason for Cancellation</p>
+                        <p class="text-sm text-gray-600">{{ refund.refund_reason|default:"Not specified" }}</p>
+                    </div>
+                    
+                    <!-- Seller's Message/Action -->
+                    {% if refund.status == 'approved' %}
+                    <div class="bg-green-50 p-4 rounded-lg mb-3 border-l-4 border-green-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-check-circle text-green-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-green-800">✅ Refund Approved by Seller</p>
+                                <p class="text-sm text-green-700 mt-1">Your refund request has been approved by the seller.</p>
+                                <p class="text-xs text-green-600 mt-2">Refund will be processed to your {{ refund.payment_method|upper }} account within 3-5 business days.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if refund.status == 'processing' %}
+                    <div class="bg-purple-50 p-4 rounded-lg mb-3 border-l-4 border-purple-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-spinner fa-pulse text-purple-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-purple-800">🔄 Refund Processing</p>
+                                <p class="text-sm text-purple-700 mt-1">The seller has initiated the refund process.</p>
+                                <p class="text-xs text-purple-600 mt-2">The amount will be credited to your account shortly.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if refund.status == 'completed' %}
+                    <div class="bg-green-100 p-4 rounded-lg mb-3 border-l-4 border-green-600">
+                        <div class="flex items-start">
+                            <i class="fas fa-check-double text-green-700 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-green-800">✅ Refund Completed</p>
+                                <p class="text-sm text-green-700 mt-1">Amount ₹{{ refund.amount }} has been successfully refunded to your {{ refund.payment_method|upper }} account.</p>
+                                <p class="text-xs text-green-600 mt-2">Refund Date: {{ refund.updated_at|date:"M d, Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if refund.status == 'rejected' %}
+                    <div class="bg-red-50 p-4 rounded-lg mb-3 border-l-4 border-red-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-times-circle text-red-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-red-800">❌ Refund Rejected by Seller</p>
+                                <div class="mt-2 p-3 bg-red-100 rounded-lg">
+                                    <p class="text-sm font-medium text-red-800">Reason from Seller:</p>
+                                    <p class="text-sm text-red-700 mt-1">{{ refund.rejection_reason|default:"No reason provided by seller." }}</p>
+                                </div>
+                                <p class="text-xs text-red-600 mt-3">If you believe this rejection was unfair, you can file a complaint against the seller.</p>
+                                <a href="{% url 'file_complaint' %}?seller={{ refund.order.items.first.product.seller.id }}&order={{ refund.order.id }}" class="inline-block mt-2 text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
+                                    <i class="fas fa-gavel mr-1"></i> File Complaint Against Seller
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if refund.status == 'pending' %}
+                    <div class="bg-yellow-50 p-4 rounded-lg mb-3 border-l-4 border-yellow-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-clock text-yellow-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-yellow-800">⏳ Waiting for Seller's Response</p>
+                                <p class="text-sm text-yellow-700 mt-1">Your refund request has been submitted and is pending seller approval.</p>
+                                <p class="text-xs text-yellow-600 mt-2">Sellers typically respond within 2-3 business days.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Payment Details for Verification -->
+                    <div class="bg-gray-50 p-3 rounded-lg mt-2">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Refund Account Details</p>
+                        {% if refund.payment_method == 'upi' and refund.upi_id %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div><span class="text-gray-600">UPI ID:</span> <span class="font-mono">{{ refund.upi_id }}</span></div>
+                            <div><span class="text-gray-600">Refund Amount:</span> <span class="font-bold text-green-600">₹{{ refund.amount }}</span></div>
+                        </div>
+                        {% endif %}
+                        {% if refund.payment_method == 'card' %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div><span class="text-gray-600">Account Holder:</span> {{ refund.account_holder_name }}</div>
+                            <div><span class="text-gray-600">Bank Name:</span> {{ refund.bank_name }}</div>
+                            <div><span class="text-gray-600">Account No:</span> ****{{ refund.account_number|slice:"-4:" }}</div>
+                            <div><span class="text-gray-600">IFSC Code:</span> {{ refund.ifsc_code }}</div>
+                            <div><span class="text-gray-600">Refund Amount:</span> <span class="font-bold text-green-600">₹{{ refund.amount }}</span></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Order Timeline -->
+                    <div class="mt-4 pt-3 border-t">
+                        <p class="text-xs text-gray-500">Requested on: {{ refund.created_at|date:"M d, Y H:i" }}</p>
+                        {% if refund.updated_at != refund.created_at %}
+                        <p class="text-xs text-gray-500">Last updated: {{ refund.updated_at|date:"M d, Y H:i" }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-xl shadow-lg p-12 text-center">
+            <i class="fas fa-money-bill-wave text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-2xl font-bold text-gray-500 mb-2">No Refund Requests</h2>
+            <p class="text-gray-400">You haven't requested any refunds yet</p>
+            <a href="{% url 'product_list' %}" class="mt-4 inline-block bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition">Start Shopping</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function showTab(tabName) {
+    // Hide all tabs
+    document.getElementById('active-tab').classList.add('hidden');
+    document.getElementById('cancelled-tab').classList.add('hidden');
+    document.getElementById('returns-tab').classList.add('hidden');
+    document.getElementById('refunds-tab').classList.add('hidden');
+    
+    // Update button styles
+    document.getElementById('tab-active-btn').classList.remove('text-red-600', 'border-red-600');
+    document.getElementById('tab-active-btn').classList.add('text-gray-600');
+    document.getElementById('tab-cancelled-btn').classList.remove('text-red-600', 'border-red-600');
+    document.getElementById('tab-cancelled-btn').classList.add('text-gray-600');
+    document.getElementById('tab-returns-btn').classList.remove('text-red-600', 'border-red-600');
+    document.getElementById('tab-returns-btn').classList.add('text-gray-600');
+    document.getElementById('tab-refunds-btn').classList.remove('text-red-600', 'border-red-600');
+    document.getElementById('tab-refunds-btn').classList.add('text-gray-600');
+    
+    // Show selected tab
+    if (tabName === 'active') {
+        document.getElementById('active-tab').classList.remove('hidden');
+        document.getElementById('tab-active-btn').classList.remove('text-gray-600');
+        document.getElementById('tab-active-btn').classList.add('text-red-600', 'border-b-2', 'border-red-600');
+    } else if (tabName === 'cancelled') {
+        document.getElementById('cancelled-tab').classList.remove('hidden');
+        document.getElementById('tab-cancelled-btn').classList.remove('text-gray-600');
+        document.getElementById('tab-cancelled-btn').classList.add('text-red-600', 'border-b-2', 'border-red-600');
+    } else if (tabName === 'returns') {
+        document.getElementById('returns-tab').classList.remove('hidden');
+        document.getElementById('tab-returns-btn').classList.remove('text-gray-600');
+        document.getElementById('tab-returns-btn').classList.add('text-red-600', 'border-b-2', 'border-red-600');
+    } else if (tabName === 'refunds') {
+        document.getElementById('refunds-tab').classList.remove('hidden');
+        document.getElementById('tab-refunds-btn').classList.remove('text-gray-600');
+        document.getElementById('tab-refunds-btn').classList.add('text-red-600', 'border-b-2', 'border-red-600');
+    }
+}
+</script>
+
+{% endblock %}

@@ -135,3 +135,26 @@ STATICFILES_DIRS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+# Session Settings - Session expires when browser is closed
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Refresh session on every request (keeps user logged in while active)
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Session cookie age (fallback - 2 weeks)
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'app.middleware.SessionTimeoutMiddleware',  # Add this line
+]
+

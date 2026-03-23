@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load custom_filters %}
+
 {% block content %}
 
 <!-- Navigation - Logo on Left, All Links on Right -->
@@ -16,10 +17,9 @@
         <a href="{% url 'product_list' %}" class="text-gray-700 hover:text-red-600 font-medium">Products</a>
         <a href="{% url 'wishlist' %}" class="text-gray-700 hover:text-red-600 font-medium">Wishlist</a>
         <a href="{% url 'cart' %}" class="text-gray-700 hover:text-red-600 font-medium">Cart</a>
-        Live Chat Link - Now toggles open/close
-<a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
-    </i> Live Chat
-</a>
+        <a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
+            <i class="fas fa-comment-dots mr-1"></i> Live Chat
+        </a>
         <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
             Logout
         </a>
@@ -54,7 +54,7 @@
                 <!-- Breadcrumb -->
                 <div class="text-sm text-gray-500 mb-4">
                     <a href="{% url 'home' %}" class="hover:text-red-600">Home</a> > 
-                    <a href="{% url 'product_list' %}?category={{ product.category }}" class="hover:text-red-600">{{ product.category|title }}</a> > 
+                    <a href="{% url 'product_list' %}?category={{ product.category }}" class="hover:text-red-600">{{ product.get_category_display }}</a> > 
                     <span class="text-gray-700">{{ product.name }}</span>
                 </div>
                 
@@ -62,19 +62,28 @@
                 <h1 class="text-4xl font-bold text-gray-800 mb-2">{{ product.name }}</h1>
                 <p class="text-gray-500 text-lg mb-4">Brand: <span class="font-semibold">{{ product.brand }}</span></p>
                 
-                <!-- Rating -->
+                <!-- Rating Summary -->
                 <div class="flex items-center mb-4">
-                    <div class="flex text-yellow-400 text-lg">
-                        ★ ★ ★ ★ ★
+                    <div class="flex text-yellow-400 text-lg mr-3">
+                        {% with avg=product.get_average_rating %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= avg %}
+                                    <i class="fas fa-star"></i>
+                                {% elif forloop.counter <= avg|add:"0.5" %}
+                                    <i class="fas fa-star-half-alt"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        {% endwith %}
                     </div>
-                    <span class="text-gray-500 ml-2">(24 customer reviews)</span>
+                    <span class="text-gray-700 font-semibold">{{ product.get_average_rating|floatformat:1 }}</span>
+                    <span class="text-gray-500 ml-2">({{ product.get_rating_count }} reviews)</span>
                 </div>
                 
                 <!-- Price -->
                 <div class="mb-6">
                     <span class="text-4xl font-bold text-red-600">₹{{ product.price }}</span>
-                    <span class="text-gray-500 line-through ml-4">₹{{ product.price|add:"2000" }}</span>
-                    <span class="text-green-600 ml-4">Save ₹2,000</span>
                 </div>
                 
                 <!-- Stock Status -->
@@ -92,40 +101,33 @@
                 </div>
                 {% endwith %}
                 
-{% load static %}
-{% load custom_filters %}
-
-<!-- ... rest of your template ... -->
-
-<!-- Weight Selection (for weights category) -->
-{% if product.available_weights %}
-<div class="mb-6">
-    <h3 class="text-lg font-semibold text-gray-700 mb-3">Select Weight:</h3>
-    <div class="flex flex-wrap gap-3" id="weightButtons">
-        {% for weight in product.available_weights %}
-            <button type="button" 
-                    class="weight-btn px-6 py-3 rounded-lg font-semibold transition
-                           {% with stock=product.stock_per_weight|get_item:weight %}
-                               {% if stock == 0 %}
-                               bg-gray-200 text-gray-500 cursor-not-allowed
-                               {% else %}
-                               bg-gray-200 text-gray-700 hover:bg-red-600 hover:text-white
-                               {% endif %}
-                           {% endwith %}"
-                    data-weight="{{ weight }}"
-                    data-stock="{{ product.stock_per_weight|get_item:weight }}"
-                    {% with stock=product.stock_per_weight|get_item:weight %}
-                        {% if stock == 0 %}disabled{% endif %}>
-                        {{ weight }}
-                        {% if stock and stock < 5 and stock > 0 %}
-                        <span class="block text-xs text-red-500">Only {{ stock }} left</span>
-                        {% endif %}
-                    {% endwith %}
-            </button>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
+                <!-- Weight Selection - FIXED SYNTAX -->
+                {% if product.available_weights %}
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-3">Select Weight:</h3>
+                    <div class="flex flex-wrap gap-3" id="weightButtons">
+                        {% for weight in product.available_weights %}
+                            {% with stock=product.stock_per_weight|get_item:weight %}
+                            <button type="button" 
+                                    class="weight-btn px-6 py-3 rounded-lg font-semibold transition
+                                           {% if stock == 0 %}
+                                           bg-gray-200 text-gray-500 cursor-not-allowed
+                                           {% else %}
+                                           bg-gray-200 text-gray-700 hover:bg-red-600 hover:text-white
+                                           {% endif %}"
+                                    data-weight="{{ weight }}"
+                                    data-stock="{{ stock|default:0 }}"
+                                    {% if stock == 0 %}disabled{% endif %}>
+                                {{ weight }}
+                                {% if stock < 5 and stock > 0 %}
+                                <span class="block text-xs text-red-500">Only {{ stock }} left</span>
+                                {% endif %}
+                            </button>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
                 
                 <!-- Add to Cart Form -->
                 <form action="{% url 'add_to_cart' product.id %}" method="POST" id="addToCartForm" class="mb-8">
@@ -163,40 +165,141 @@
                 </form>
                 
                 <!-- Product Description -->
-                <div class="border-t pt-6">
+                <div class="border-t pt-6 mb-6">
                     <h3 class="text-xl font-bold text-gray-800 mb-4">Product Description</h3>
                     <p class="text-gray-600 leading-relaxed">{{ product.description }}</p>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Ratings & Reviews Section -->
+        <div class="border-t border-gray-200 px-8 py-8 bg-gray-50">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Customer Ratings & Reviews</h2>
                 
-                <!-- Key Features -->
-                <div class="border-t mt-6 pt-6">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4">Key Features</h3>
-                    <ul class="space-y-2 text-gray-600">
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Premium quality material for long-lasting durability
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Ergonomic design for comfortable grip
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Suitable for home and commercial gym use
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            1 year manufacturer warranty
-                        </li>
-                    </ul>
+                <!-- Rating Summary -->
+                <div class="bg-white rounded-xl p-6 shadow-sm mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="text-center">
+                            <p class="text-5xl font-bold text-gray-800">{{ product.get_average_rating|floatformat:1 }}</p>
+                            <div class="flex justify-center text-yellow-400 text-xl my-2">
+                                {% with avg=product.get_average_rating %}
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= avg %}
+                                            <i class="fas fa-star"></i>
+                                        {% elif forloop.counter <= avg|add:"0.5" %}
+                                            <i class="fas fa-star-half-alt"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endwith %}
+                            </div>
+                            <p class="text-gray-500">{{ product.get_rating_count }} total reviews</p>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <h4 class="font-semibold text-gray-700 mb-3">Rating Breakdown</h4>
+                            {% with dist=product.get_rating_distribution %}
+                                {% for star in "54321" %}
+                                <div class="flex items-center mb-2">
+                                    <span class="w-12 text-sm text-gray-600">{{ star }} ★</span>
+                                    <div class="flex-1 h-3 bg-gray-200 rounded-full mx-3 overflow-hidden">
+                                        <div class="h-full bg-yellow-400 rounded-full" style="width: {% widthratio dist.5 product.get_rating_count 100 %}%"></div>
+                                    </div>
+                                    <span class="w-12 text-sm text-gray-600">{{ dist.5 }}</span>
+                                </div>
+                                {% endfor %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Write a Review Button -->
+                <button onclick="document.getElementById('reviewForm').classList.toggle('hidden')" class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition mb-6">
+                    Write a Review
+                </button>
+                
+                <!-- Review Form (Hidden by default) -->
+                <div id="reviewForm" class="hidden bg-white rounded-xl p-6 shadow-sm mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Share Your Experience</h3>
+                    
+                    {% if user.is_authenticated %}
+                        <form method="POST" action="{% url 'add_product_rating' product.id %}">
+                            {% csrf_token %}
+                            
+                            <!-- Star Rating -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Your Rating</label>
+                                <div class="flex space-x-4 rating-stars">
+                                    {% for i in "12345" %}
+                                    <label class="cursor-pointer text-center">
+                                        <input type="radio" name="rating" value="{{ forloop.counter }}" class="hidden rating-radio" required>
+                                        <span class="text-4xl text-gray-300 hover:text-yellow-400 transition star-{{ forloop.counter }}">☆</span>
+                                        <span class="block text-xs mt-1 text-gray-500">{{ forloop.counter }} Star</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Review Text -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Your Review (Optional)</label>
+                                <textarea name="review" rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Share your experience with this product..."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition">
+                                Submit Review
+                            </button>
+                        </form>
+                    {% else %}
+                        <p class="text-gray-600 text-center py-4">Please <a href="{% url 'login' %}" class="text-red-600 font-semibold">login</a> to write a review.</p>
+                    {% endif %}
+                </div>
+                
+                <!-- All Reviews -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Reviews</h3>
+                    
+                    {% for rating in product.ratings.all|dictsortreversed:"created_at" %}
+                    <div class="bg-white rounded-xl p-6 shadow-sm">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center">
+                                <div class="bg-gray-200 rounded-full w-10 h-10 flex items-center justify-center mr-3">
+                                    <span class="text-gray-600 font-bold">{{ rating.user.username|first|upper }}</span>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800">{{ rating.user.username }}</p>
+                                    <div class="flex text-yellow-400 text-sm">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= rating.rating %}
+                                                <i class="fas fa-star"></i>
+                                            {% else %}
+                                                <i class="far fa-star"></i>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500">{{ rating.created_at|date:"F d, Y" }}</span>
+                        </div>
+                        
+                        {% if rating.review %}
+                        <p class="text-gray-700 ml-12">{{ rating.review }}</p>
+                        {% endif %}
+                        
+                        {% if rating.user == user %}
+                        <div class="ml-12 mt-3">
+                            <a href="{% url 'delete_product_rating' rating.id %}" class="text-red-600 text-sm hover:underline" onclick="return confirm('Delete your review?')">Delete</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="bg-white rounded-xl p-8 text-center">
+                        <i class="far fa-star text-5xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500 text-lg">No reviews yet. Be the first to review this product!</p>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -208,7 +311,6 @@
 // Weight selection functionality
 const weightButtons = document.querySelectorAll('.weight-btn');
 const selectedWeightInput = document.getElementById('selectedWeight');
-const selectedWeightDisplay = document.getElementById('selectedWeightDisplay');
 let selectedWeight = '';
 
 weightButtons.forEach(btn => {
@@ -228,7 +330,6 @@ weightButtons.forEach(btn => {
         // Set selected weight
         selectedWeight = this.dataset.weight;
         selectedWeightInput.value = selectedWeight;
-        selectedWeightDisplay.textContent = `Selected: ${selectedWeight}`;
         
         // Update max quantity based on stock
         const stock = parseInt(this.dataset.stock);
@@ -269,6 +370,129 @@ document.getElementById('addToCartForm')?.addEventListener('submit', function(e)
 });
 </script>
 
+<!-- =========================================== -->
+<!-- STAR RATING JAVASCRIPT -->
+<!-- =========================================== -->
+<script>
+// Rating star hover effect
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.rating-stars .star-1, .rating-stars .star-2, .rating-stars .star-3, .rating-stars .star-4, .rating-stars .star-5');
+    const ratingContainer = document.querySelector('.rating-stars');
+    
+    if (!ratingContainer) return;
+    
+    // Hover effect
+    stars.forEach(star => {
+        star.addEventListener('mouseenter', function() {
+            const value = this.classList[1].split('-')[1];
+            for (let i = 1; i <= 5; i++) {
+                const s = document.querySelector(`.star-${i}`);
+                if (s) {
+                    if (i <= value) {
+                        s.textContent = '★';
+                        s.classList.add('text-yellow-400');
+                        s.classList.remove('text-gray-300');
+                    } else {
+                        s.textContent = '☆';
+                        s.classList.remove('text-yellow-400');
+                        s.classList.add('text-gray-300');
+                    }
+                }
+            }
+        });
+    });
+    
+    // Mouse leave - revert to selected rating
+    ratingContainer.addEventListener('mouseleave', function() {
+        const selected = document.querySelector('.rating-radio:checked');
+        if (selected) {
+            const value = selected.value;
+            for (let i = 1; i <= 5; i++) {
+                const s = document.querySelector(`.star-${i}`);
+                if (s) {
+                    if (i <= value) {
+                        s.textContent = '★';
+                        s.classList.add('text-yellow-400');
+                        s.classList.remove('text-gray-300');
+                    } else {
+                        s.textContent = '☆';
+                        s.classList.remove('text-yellow-400');
+                        s.classList.add('text-gray-300');
+                    }
+                }
+            }
+        } else {
+            document.querySelectorAll('.rating-stars span').forEach(s => {
+                if (s) {
+                    s.textContent = '☆';
+                    s.classList.remove('text-yellow-400');
+                    s.classList.add('text-gray-300');
+                }
+            });
+        }
+    });
+    
+    // Radio change - update stars
+    document.querySelectorAll('.rating-radio').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const value = this.value;
+            for (let i = 1; i <= 5; i++) {
+                const s = document.querySelector(`.star-${i}`);
+                if (s) {
+                    if (i <= value) {
+                        s.textContent = '★';
+                        s.classList.add('text-yellow-400');
+                        s.classList.remove('text-gray-300');
+                    } else {
+                        s.textContent = '☆';
+                        s.classList.remove('text-yellow-400');
+                        s.classList.add('text-gray-300');
+                    }
+                }
+            }
+        });
+    });
+});
+</script>
+
+<!-- Add this CSS to fix zoom issues -->
+<style>
+/* Fix for zoom issues */
+body {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* Ensure images don't overflow */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Rating stars */
+.rating-stars label {
+    cursor: pointer;
+}
+
+.rating-stars input:checked + span {
+    color: #fbbf24;
+}
+
+/* Responsive fixes */
+@media (max-width: 768px) {
+    .text-4xl {
+        font-size: 2rem;
+    }
+    .px-10 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+</style>
+
 <!-- Footer -->
 <footer class="bg-gray-900 text-white py-10 mt-10">
     <div class="max-w-7xl mx-auto px-4">
@@ -280,9 +504,10 @@ document.getElementById('addToCartForm')?.addEventListener('submit', function(e)
             <div>
                 <h5 class="font-semibold mb-3">Quick Links</h5>
                 <ul class="text-gray-400 text-sm space-y-2">
-                    <li><a href="#" class="hover:text-white">About Us</a></li>
-                    <li><a href="#" class="hover:text-white">Contact</a></li>
-                    <li><a href="#" class="hover:text-white">FAQs</a></li>
+                    <li><a href="{% url 'home' %}" class="hover:text-white">Home</a></li>
+                    <li><a href="{% url 'product_list' %}" class="hover:text-white">Products</a></li>
+                    <li><a href="{% url 'wishlist' %}" class="hover:text-white">Wishlist</a></li>
+                    <li><a href="{% url 'cart' %}" class="hover:text-white">Cart</a></li>
                 </ul>
             </div>
             <div>

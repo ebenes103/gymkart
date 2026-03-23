@@ -38,9 +38,14 @@
             <a href="{% url 'wishlist' %}" class="text-gray-700 hover:text-red-600 font-medium">Wishlist</a>
             <a href="{% url 'cart' %}" class="text-gray-700 hover:text-red-600 font-medium">Cart</a>
             
+            <!-- My Orders Link - Added -->
+            <a href="{% url 'my_orders' %}" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
+               My Orders
+            </a>
+            
             <!-- Live Chat Link - Only shown in navbar on non-login pages -->
             <a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
-               </i> Live Chat
+              Live Chat
             </a>
             
             <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
@@ -124,6 +129,25 @@ window.checkTawkTo = function() {
 })();
 </script>
 {% endif %}
+
+
+<script>
+
+    
+// This will log out the user when the Chrome tab is closed
+window.addEventListener('beforeunload', function() {
+    // Send a logout request using sendBeacon (works even when tab closes)
+    navigator.sendBeacon("{% url 'logout' %}");
+});
+
+// Also handle page hide event (for mobile and tab switching)
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // Tab is being hidden (switched or closed)
+        // We don't logout immediately on hide, only on actual close
+    }
+});
+</script>
 
 </body>
 </html>
