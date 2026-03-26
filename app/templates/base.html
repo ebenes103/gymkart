@@ -10,22 +10,25 @@
 </head>
 <body class="bg-gray-100">
 
-{% if messages %}
-<div class="max-w-6xl mx-auto mt-4">
-    {% for message in messages %}
-    <div class="{% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %} p-4 rounded-lg mb-2 flex items-center justify-between">
-        <span>{{ message }}</span>
-        <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-gray-700">
-            <i class="fas fa-times"></i>
-        </button>
+    <!-- Messages Block -->
+    <div class="fixed top-0 left-0 right-0 z-50">
+        {% if messages %}
+        <div class="max-w-6xl mx-auto mt-4 px-4">
+            {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %} p-4 rounded-lg mb-2 flex items-center justify-between shadow-lg">
+                <span>{{ message }}</span>
+                <button onclick="this.parentElement.remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
-    {% endfor %}
-</div>
-{% endif %}
 
     <!-- Navigation Bar - Hidden on login and register pages -->
     {% if request.path != '/login/' and request.path != '/' and request.path != '/register/' %}
-    <nav class="bg-white shadow-lg px-10 py-4 flex justify-between items-center sticky top-0 z-50">
+    <nav class="bg-white shadow-lg px-10 py-4 flex justify-between items-center sticky top-0 z-50 mt-16">
         <div>
             <a href="{% url 'home' %}" class="text-3xl font-extrabold">
                 <span class="text-red-600">GYM</span><span class="text-gray-800">KART</span>
@@ -37,20 +40,9 @@
             <a href="{% url 'product_list' %}" class="text-gray-700 hover:text-red-600 font-medium">Products</a>
             <a href="{% url 'wishlist' %}" class="text-gray-700 hover:text-red-600 font-medium">Wishlist</a>
             <a href="{% url 'cart' %}" class="text-gray-700 hover:text-red-600 font-medium">Cart</a>
-            
-            <!-- My Orders Link - Added -->
-            <a href="{% url 'my_orders' %}" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
-               My Orders
-            </a>
-            
-            <!-- Live Chat Link - Only shown in navbar on non-login pages -->
-            <a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium flex items-center">
-              Live Chat
-            </a>
-            
-            <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">
-                Logout
-            </a>
+            <a href="{% url 'my_orders' %}" class="text-gray-700 hover:text-red-600 font-medium">My Orders</a>
+            <a href="javascript:void(0);" onclick="window.toggleTawkTo()" class="text-gray-700 hover:text-red-600 font-medium">Live Chat</a>
+            <a href="{% url 'logout' %}" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition duration-300 shadow-md">Logout</a>
         </div>
     </nav>
     {% endif %}
@@ -58,96 +50,57 @@
     {% block content %}
     {% endblock %}
 
-<!-- Load Tawk.to Script ONLY on non-login/register pages -->
-{% if request.path != '/login/' and request.path != '/' and request.path != '/register/' %}
-<!-- Tawk.to Script with Toggle Function -->
-<script type="text/javascript">
-var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
+    <!-- Tawk.to Script - No Django tags inside JavaScript -->
+    {% if request.path != '/login/' and request.path != '/' and request.path != '/register/' %}
+    <script type="text/javascript">
+    var Tawk_API = Tawk_API || {}, Tawk_LoadStart = new Date();
 
-// Variable to track chat state
-var isChatOpen = false;
-
-// Function to toggle chat open/close
-window.toggleTawkTo = function() {
-    if (typeof Tawk_API !== 'undefined') {
-        if (Tawk_API.isChatMaximized && Tawk_API.isChatMaximized()) {
-            // Chat is open, so minimize it
-            if (Tawk_API.minimize) {
-                Tawk_API.minimize();
-                console.log('Chat minimized');
-                isChatOpen = false;
+    // Function to toggle chat open/close
+    window.toggleTawkTo = function() {
+        if (typeof Tawk_API !== 'undefined') {
+            if (Tawk_API.isChatMaximized && Tawk_API.isChatMaximized()) {
+                if (Tawk_API.minimize) {
+                    Tawk_API.minimize();
+                }
+            } else {
+                if (Tawk_API.maximize) {
+                    Tawk_API.maximize();
+                }
             }
         } else {
-            // Chat is closed, so open it
-            if (Tawk_API.maximize) {
-                Tawk_API.maximize();
-                console.log('Chat opened');
-                isChatOpen = true;
-            }
+            setTimeout(window.toggleTawkTo, 500);
         }
-    } else {
-        console.log('Tawk.to not loaded yet, retrying...');
-        // Try again after a short delay
-        setTimeout(window.toggleTawkTo, 500);
-    }
-};
-
-// Function to open chat (legacy support)
-window.openTawkTo = function() {
-    window.toggleTawkTo();
-};
-
-// Function to check if Tawk.to is loaded
-window.checkTawkTo = function() {
-    if (typeof Tawk_API !== 'undefined') {
-        console.log('Tawk.to loaded successfully');
-        return true;
-    }
-    return false;
-};
-
-(function() {
-    var s1 = document.createElement("script"),
-        s0 = document.getElementsByTagName("script")[0];
-    s1.async = true;
-    s1.src = 'https://embed.tawk.to/69b71a1b1a01d51c354297a5/1jjpjrv8r';
-    s1.charset = 'UTF-8';
-    s1.setAttribute('crossorigin', '*');
-    s1.onload = function() {
-        console.log('Tawk.to script loaded');
-        // Pass user info to tawk.to if logged in
-        {% if user.is_authenticated %}
-        if (Tawk_API) {
-            Tawk_API.visitor = {
-                name: '{{ user.username }}',
-                email: '{{ user.email }}'
-            };
-        }
-        {% endif %}
     };
-    s0.parentNode.insertBefore(s1, s0);
-})();
-</script>
-{% endif %}
 
+    window.openTawkTo = function() {
+        window.toggleTawkTo();
+    };
 
-<script>
+    window.checkTawkTo = function() {
+        if (typeof Tawk_API !== 'undefined') {
+            return true;
+        }
+        return false;
+    };
 
-    
-// This will log out the user when the Chrome tab is closed
-window.addEventListener('beforeunload', function() {
-    // Send a logout request using sendBeacon (works even when tab closes)
-    navigator.sendBeacon("{% url 'logout' %}");
-});
+    (function() {
+        var s1 = document.createElement("script");
+        var s0 = document.getElementsByTagName("script")[0];
+        s1.async = true;
+        s1.src = 'https://embed.tawk.to/69b71a1b1a01d51c354297a5/1jjpjrv8r';
+        s1.charset = 'UTF-8';
+        s1.setAttribute('crossorigin', '*');
+        s0.parentNode.insertBefore(s1, s0);
+    })();
+    </script>
+    {% endif %}
 
-// Also handle page hide event (for mobile and tab switching)
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        // Tab is being hidden (switched or closed)
-        // We don't logout immediately on hide, only on actual close
-    }
-});
-</script>
+    <script>
+    // Logout on tab close
+    window.addEventListener('beforeunload', function() {
+        navigator.sendBeacon("{% url 'logout' %}");
+    });
+    </script>
 
 </body>
 </html>

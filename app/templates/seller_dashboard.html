@@ -55,6 +55,10 @@
         <i class="fas fa-dumbbell text-2xl"></i>
         <span class="text-2xl font-bold">GymKart Seller</span>
     </div>
+    <div class="flex items-center space-x-4">
+        <a href="{% url 'home' %}" class="text-white/90 hover:text-white">
+            <i class="fas fa-store mr-1"></i> Store
+        </a>
         <a href="{% url 'logout' %}" class="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition font-medium">
             <i class="fas fa-sign-out-alt mr-2"></i>Logout
         </a>
@@ -74,6 +78,64 @@
         </div>
     </div>
 
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div class="gym-card p-6">
+            <div class="flex items-center">
+                <div class="bg-blue-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-box text-2xl text-blue-600"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">Total Products</p>
+                    <p class="text-3xl font-bold text-gray-800">{{ total_products }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="gym-card p-6">
+            <div class="flex items-center">
+                <div class="bg-green-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-shopping-cart text-2xl text-green-600"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">Active Orders</p>
+                    <p class="text-3xl font-bold text-green-600">{{ total_active_orders|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="gym-card p-6">
+            <div class="flex items-center">
+                <div class="bg-red-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-times-circle text-2xl text-red-600"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">Cancelled Orders</p>
+                    <p class="text-3xl font-bold text-red-600">{{ total_cancelled_orders|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="gym-card p-6">
+            <div class="flex items-center">
+                <div class="bg-yellow-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-undo-alt text-2xl text-yellow-600"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">Returns</p>
+                    <p class="text-3xl font-bold text-yellow-600">{{ pending_returns_count|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="gym-card p-6">
+            <div class="flex items-center">
+                <div class="bg-purple-100 rounded-full p-3 mr-4">
+                    <i class="fas fa-money-bill-wave text-2xl text-purple-600"></i>
+                </div>
+                <div>
+                    <p class="text-gray-500 text-sm">Refunds</p>
+                    <p class="text-3xl font-bold text-purple-600">{{ pending_refunds_count|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Tabs Navigation -->
     <div class="flex flex-wrap border-b border-gray-200 mb-6">
@@ -133,7 +195,7 @@
                                         <p class="text-xs text-gray-500">{{ product.brand }}</p>
                                     </div>
                                 </div>
-                             </td>
+                            </td>
                             <td class="px-6 py-4 font-bold text-red-600">₹{{ product.price }}</td>
                             <td class="px-6 py-4">
                                 {% if product.available_weights %}
@@ -183,7 +245,7 @@
                         </tr>
                         {% endfor %}
                     </tbody>
-                </table>
+                 </table>
             </div>
         </div>
     </div>
@@ -337,34 +399,12 @@
             <div class="gym-card overflow-hidden">
                 <div class="p-6">
                     <div class="flex flex-wrap justify-between items-start mb-4">
-                        <div>
-                            <p class="text-sm text-gray-500">Refund ID</p>
-                            <p class="font-bold">#{{ refund.id }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Order ID</p>
-                            <p>{{ refund.order.order_id }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Customer</p>
-                            <p class="font-semibold">{{ refund.user.username }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Amount</p>
-                            <p class="text-xl font-bold text-red-600">₹{{ refund.amount }}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Payment Method</p>
-                            <p class="font-semibold">
-                                {% if refund.payment_method == 'upi' %}
-                                    <i class="fab fa-google-pay text-blue-600 mr-1"></i> UPI
-                                {% else %}
-                                    <i class="fas fa-credit-card text-purple-600 mr-1"></i> Card
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-gray-500">Status</p>
+                        <div><p class="text-sm text-gray-500">Refund ID</p><p class="font-bold">#{{ refund.id }}</p></div>
+                        <div><p class="text-sm text-gray-500">Order ID</p><p>{{ refund.order.order_id }}</p></div>
+                        <div><p class="text-sm text-gray-500">Customer</p><p class="font-semibold">{{ refund.user.username }}</p></div>
+                        <div><p class="text-sm text-gray-500">Amount</p><p class="text-xl font-bold text-red-600">₹{{ refund.amount }}</p></div>
+                        <div><p class="text-sm text-gray-500">Payment Method</p><p>{{ refund.payment_method|upper }}</p></div>
+                        <div><p class="text-sm text-gray-500">Status</p>
                             <span class="status-badge 
                                 {% if refund.status == 'pending' %}bg-yellow-100 text-yellow-600
                                 {% elif refund.status == 'approved' %}bg-blue-100 text-blue-600
@@ -372,53 +412,27 @@
                                 {% elif refund.status == 'completed' %}bg-green-100 text-green-600
                                 {% elif refund.status == 'admin_warning' %}bg-orange-100 text-orange-600
                                 {% else %}bg-red-100 text-red-600{% endif %}">
-                                {% if refund.status == 'admin_warning' %}
-                                    <i class="fas fa-exclamation-triangle mr-1"></i> Admin Warning - Action Required
-                                {% else %}
-                                    {{ refund.get_status_display }}
-                                {% endif %}
+                                {{ refund.get_status_display }}
                             </span>
                         </div>
                     </div>
                     
-                    <!-- Customer's Reason -->
                     <div class="bg-gray-50 p-3 rounded-lg mb-3">
-                        <p class="text-sm font-semibold text-gray-700 mb-1">Customer's Reason</p>
+                        <p class="text-sm font-semibold text-gray-700">Customer's Reason</p>
                         <p class="text-sm text-gray-600">{{ refund.refund_reason|default:"Not specified" }}</p>
                     </div>
                     
-                    <!-- Admin Warning Message (if applicable) -->
-                    {% if refund.status == 'admin_warning' and refund.admin_warning_note %}
-                    <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-lg mb-4">
-                        <div class="flex items-start">
-                            <i class="fas fa-gavel text-orange-600 text-xl mt-1 mr-3"></i>
-                            <div>
-                                <p class="font-semibold text-orange-800">⚠️ Admin Warning</p>
-                                <p class="text-sm text-orange-700 mt-1">{{ refund.admin_warning_note }}</p>
-                                <p class="text-xs text-orange-600 mt-2">Warning issued on: {{ refund.admin_warning_date|date:"M d, Y H:i" }}</p>
-                                <p class="text-xs text-orange-600 mt-1">Please process this refund immediately to avoid further action.</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Payment Details for Refund -->
+                    <!-- Payment Details -->
                     <div class="bg-blue-50 p-3 rounded-lg mb-4">
-                        <p class="text-sm font-semibold text-blue-800 mb-2">Refund Details</p>
+                        <p class="text-sm font-semibold text-blue-800">Refund Details</p>
                         {% if refund.payment_method == 'upi' and refund.upi_id %}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <div><span class="text-gray-600">UPI ID:</span> <span class="font-mono">{{ refund.upi_id }}</span></div>
-                            <div><span class="text-gray-600">Amount to Refund:</span> <span class="font-bold text-green-600">₹{{ refund.amount }}</span></div>
-                        </div>
+                        <p class="text-sm"><span class="text-gray-600">UPI ID:</span> {{ refund.upi_id }}</p>
+                        <p class="text-sm"><span class="text-gray-600">Amount:</span> ₹{{ refund.amount }}</p>
                         {% endif %}
                         {% if refund.payment_method == 'card' %}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <div><span class="text-gray-600">Account Holder:</span> {{ refund.account_holder_name }}</div>
-                            <div><span class="text-gray-600">Bank Name:</span> {{ refund.bank_name }}</div>
-                            <div><span class="text-gray-600">Account Number:</span> ****{{ refund.account_number|slice:"-4:" }}</div>
-                            <div><span class="text-gray-600">IFSC Code:</span> {{ refund.ifsc_code }}</div>
-                            <div><span class="text-gray-600">Amount to Refund:</span> <span class="font-bold text-green-600">₹{{ refund.amount }}</span></div>
-                        </div>
+                        <p class="text-sm"><span class="text-gray-600">Account Holder:</span> {{ refund.account_holder_name }}</p>
+                        <p class="text-sm"><span class="text-gray-600">Bank:</span> {{ refund.bank_name }}</p>
+                        <p class="text-sm"><span class="text-gray-600">Account:</span> ****{{ refund.account_number|slice:"-4:" }}</p>
                         {% endif %}
                     </div>
                     
@@ -429,80 +443,87 @@
                             <form method="POST" action="{% url 'seller_update_refund' refund.id %}" class="inline">
                                 {% csrf_token %}
                                 <input type="hidden" name="action" value="accept">
-                                <button type="submit" onclick="return confirm('Approve this refund request? Amount ₹{{ refund.amount }} will be refunded to the customer.')" 
-                                        class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg transition flex items-center">
+                                <button type="submit" onclick="return confirm('Approve this refund request? Amount ₹{{ refund.amount }} will be refunded to the customer.')" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg transition">
                                     <i class="fas fa-check-circle mr-2"></i> Accept Refund
                                 </button>
                             </form>
-                            <button onclick="showRejectModal('{{ refund.id }}')" 
-                                    class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg transition flex items-center">
+                            <button onclick="showRejectModal('{{ refund.id }}')" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg transition">
                                 <i class="fas fa-times-circle mr-2"></i> Reject Refund
                             </button>
                         </div>
-                        
-                        <!-- Hidden Rejection Modal -->
-                        <div id="rejectModal-{{ refund.id }}" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
-                                <div class="bg-red-600 text-white px-6 py-4 rounded-t-xl">
-                                    <h3 class="text-xl font-bold">Reject Refund Request</h3>
-                                </div>
-                                <form method="POST" action="{% url 'seller_update_refund' refund.id %}" class="p-6">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="reject">
-                                    <div class="mb-4">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason <span class="text-red-500">*</span></label>
-                                        <textarea name="rejection_reason" rows="4" required 
-                                                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                                                  placeholder="Please provide a detailed reason for rejecting this refund request..."></textarea>
-                                        <p class="text-xs text-gray-500 mt-1">This reason will be shared with the customer</p>
-                                    </div>
-                                    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4">
-                                        <p class="text-sm text-yellow-700">
-                                            <i class="fas fa-info-circle mr-1"></i> 
-                                            The customer will be notified about this rejection with your reason.
-                                        </p>
-                                    </div>
-                                    <div class="flex space-x-3">
-                                        <button type="submit" class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition">Confirm Rejection</button>
-                                        <button type="button" onclick="hideRejectModal('{{ refund.id }}')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition">Cancel</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
                     </div>
+                    {% endif %}
                     
-                    {% elif refund.status == 'admin_warning' %}
+                    <!-- Admin Warning Section -->
+                    {% if refund.status == 'admin_warning' %}
                     <div class="border-t pt-4">
                         <div class="bg-orange-50 p-4 rounded-lg mb-3">
-                            <p class="text-sm text-orange-800 mb-3">⚠️ This refund request requires immediate action due to admin warning.</p>
+                            <p class="text-sm text-orange-800 mb-3">⚠️ Admin Warning: {{ refund.admin_warning_note }}</p>
                             <form method="POST" action="{% url 'seller_update_refund' refund.id %}" class="inline">
                                 {% csrf_token %}
-                                <input type="hidden" name="action" value="accept_after_warning">
-                                <button type="submit" onclick="return confirm('Admin has issued a warning. Do you want to accept this refund now?')" 
-                                        class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg transition flex items-center">
-                                    <i class="fas fa-check-circle mr-2"></i> Accept Refund (Comply with Admin)
+                                <input type="hidden" name="action" value="accept">
+                                <button type="submit" onclick="return confirm('Admin has issued a warning. Do you want to accept this refund now?')" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded-lg transition">
+                                    <i class="fas fa-check-circle mr-2"></i> Accept Refund
                                 </button>
                             </form>
                         </div>
                     </div>
+                    {% endif %}
                     
-                    {% elif refund.status == 'approved' %}
+                    <!-- Upload Proof for Approved Refunds -->
+                    {% if refund.status == 'approved' %}
+                    <div class="border-t pt-4 mt-4">
+                        <h4 class="font-semibold text-gray-700 mb-3">Upload Refund Proof</h4>
+                        <form method="POST" action="{% url 'seller_upload_refund_proof' refund.id %}" enctype="multipart/form-data" class="space-y-3">
+                            {% csrf_token %}
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Upload Transaction Screenshot/Receipt</label>
+                                <input type="file" name="proof_image" accept="image/*" required class="w-full px-3 py-2 border rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Additional Notes (Optional)</label>
+                                <textarea name="proof_notes" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Transaction ID, UTR number, etc."></textarea>
+                            </div>
+                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                                <i class="fas fa-upload mr-1"></i> Submit Refund Proof
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Show Proof Status for Processing/Completed -->
+                    {% if refund.status == 'processing' and refund.proof_image %}
                     <div class="mt-4 pt-3 border-t">
-                        <div class="bg-blue-50 p-3 rounded-lg">
-                            <i class="fas fa-clock text-blue-600 mr-2"></i>
-                            <span class="text-blue-800">Refund approved. Processing will be completed in 3-5 business days.</span>
+                        <div class="bg-yellow-50 p-3 rounded-lg">
+                            <i class="fas fa-hourglass-half text-yellow-600 mr-2"></i>
+                            <span class="text-yellow-800">Proof submitted! Waiting for admin verification.</span>
+                            <div class="mt-2">
+                                <a href="{{ refund.proof_image.url }}" target="_blank" class="text-blue-500 text-sm hover:underline">
+                                    <i class="fas fa-image mr-1"></i> View Submitted Proof
+                                </a>
+                            </div>
                         </div>
                     </div>
+                    {% endif %}
                     
-                    {% elif refund.status == 'completed' %}
+                    {% if refund.status == 'completed' %}
                     <div class="mt-4 pt-3 border-t">
                         <div class="bg-green-50 p-3 rounded-lg">
                             <i class="fas fa-check-circle text-green-600 mr-2"></i>
                             <span class="text-green-800">Refund completed successfully!</span>
+                            {% if refund.proof_image %}
+                            <div class="mt-2">
+                                <a href="{{ refund.proof_image.url }}" target="_blank" class="text-blue-500 text-sm hover:underline">
+                                    <i class="fas fa-image mr-1"></i> View Proof
+                                </a>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
+                    {% endif %}
                     
-                    {% elif refund.status == 'rejected' %}
+                    <!-- Rejected Status -->
+                    {% if refund.status == 'rejected' %}
                     <div class="mt-4 pt-3 border-t">
                         <div class="bg-red-50 p-3 rounded-lg mb-3">
                             <div class="flex items-start">
@@ -512,25 +533,21 @@
                                     {% if refund.rejection_reason %}
                                     <p class="text-sm text-red-700 mt-2"><strong>Reason:</strong> {{ refund.rejection_reason }}</p>
                                     {% endif %}
-                                    <p class="text-xs text-red-600 mt-2">Customer may file a complaint against this rejection.</p>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Accept Refund Button for Rejected Requests -->
                         <form method="POST" action="{% url 'seller_update_refund' refund.id %}" class="inline-block w-full">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="accept">
-                            <button type="submit" onclick="return confirm('This refund was previously rejected. Do you want to accept it now? The customer will be notified and refund will be processed.')" 
-                                    class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition flex items-center justify-center">
-                                <i class="fas fa-check-circle mr-2"></i> Accept Refund (Override Previous Decision)
+                            <button type="submit" onclick="return confirm('This refund was previously rejected. Do you want to accept it now?')" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition">
+                                <i class="fas fa-check-circle mr-2"></i> Accept Refund (Override)
                             </button>
                         </form>
                     </div>
                     {% endif %}
                 </div>
             </div>
-            {% endfor %}  <!-- THIS IS THE MISSING ENDFOR TAG -->
+            {% endfor %}
         </div>
         {% else %}
         <div class="gym-card p-12 text-center">
@@ -634,7 +651,6 @@
         document.getElementById(`rejectModal-${refundId}`).classList.add('hidden');
     }
 
-    // Close modal when clicking outside
     window.onclick = function(event) {
         if (event.target.classList.contains('fixed')) {
             document.querySelectorAll('[id^="rejectModal-"]').forEach(modal => {

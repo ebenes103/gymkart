@@ -15,7 +15,6 @@ urlpatterns = [
     path('delete-product/<int:product_id>/', views.delete_product, name='delete_product'),
     
     # Seller Order URLs
-    # path('seller-orders/', views.seller_orders, name='seller_orders'),  # REMOVE THIS LINE - NOT NEEDED
     path('seller-update-order/<int:order_id>/', views.seller_update_order_status, name='seller_update_order_status'),
     
     # Cart URLs
@@ -40,6 +39,10 @@ urlpatterns = [
     path('cancel-order/<int:order_id>/', views.cancel_order, name='cancel_order'),
     path('request-refund/<int:order_id>/', views.request_refund, name='request_refund'),
     
+    # Payment URLs
+    path('payment-success/', views.payment_success, name='payment_success'),
+    path('payment-failed/', views.payment_failed, name='payment_failed'),
+    
     # Return URLs
     path('request-return/<int:order_id>/<int:product_id>/', views.request_return, name='request_return'),
     path('seller-returns/', views.seller_returns, name='seller_returns'),
@@ -48,8 +51,8 @@ urlpatterns = [
     # Complaint URLs
     path('file-complaint/', views.file_complaint, name='file_complaint'),
     path('my-complaints/', views.my_complaints, name='my_complaints'),
-   path('admin-complaints/', views.admin_complaints, name='admin_complaints'),
-path('resolve-complaint/<int:complaint_id>/', views.resolve_complaint, name='resolve_complaint'),
+    path('admin-complaints/', views.admin_complaints, name='admin_complaints'),
+    path('resolve-complaint/<int:complaint_id>/', views.resolve_complaint, name='resolve_complaint'),
     
     # Newsletter URL
     path('subscribe-newsletter/', views.subscribe_newsletter, name='subscribe_newsletter'),
@@ -62,9 +65,10 @@ path('resolve-complaint/<int:complaint_id>/', views.resolve_complaint, name='res
     # Notify Me URL
     path('notify-me/<int:product_id>/', views.notify_me, name='notify_me'),
     
-
-    #update_refund URL
+    # Refund URLs
     path('seller-update-refund/<int:refund_id>/', views.seller_update_refund, name='seller_update_refund'),
-
+    path('seller-upload-refund-proof/<int:refund_id>/', views.seller_upload_refund_proof, name='seller_upload_refund_proof'),
+    path('admin-verify-refund/<int:refund_id>/', views.admin_verify_refund, name='admin_verify_refund'),
+    
     path('logout/', views.logout_view, name='logout'),
 ]

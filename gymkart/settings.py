@@ -10,21 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-6%$%%$&7e(lb_u*ukdbz8bxpvtn9*)!7_t5wkqykrp&*x=%#^$'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-6%$%%$&7e(lb_u*ukdbz8bxpvtn9*)!7_t5wkqykrp&*x=%#^$')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+# Razorpay Settings
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', '')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', '')
+
+
 
 ALLOWED_HOSTS = []
 
@@ -40,7 +46,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'app',
     'tawkto',
-
 ]
 
 TAWKTO_ID_SITE = '69b71a1b1a01d51c354297a5'  # Your Site ID
@@ -53,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'app.middleware.SessionTimeoutMiddleware',
 ]
 
 ROOT_URLCONF = 'gymkart.urls'
@@ -63,12 +69,12 @@ TEMPLATES = [
         'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
-           'context_processors': [
-    'django.template.context_processors.request',
-    'django.template.context_processors.csrf',   # ADD THIS
-    'django.contrib.auth.context_processors.auth',
-    'django.contrib.messages.context_processors.messages',
-],
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.template.context_processors.csrf',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
         },
     },
 ]
@@ -125,16 +131,8 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-LOGIN_URL = 'login'
-
-
-STATICFILES_DIRS = [
-    BASE_DIR / "static"
-]
-
-MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+LOGIN_URL = 'login'
 
 
 # Session Settings - Session expires when browser is closed
@@ -147,14 +145,6 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
 
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'app.middleware.SessionTimeoutMiddleware',  # Add this line
-]
+
+
 

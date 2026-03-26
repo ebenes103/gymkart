@@ -220,7 +220,6 @@
     </div>
     
     <!-- Refunds Tab -->
-    <!-- Refunds Tab -->
     <div id="refunds-tab" class="tab-content hidden">
         {% if refunds %}
         <div class="space-y-4">
@@ -241,21 +240,13 @@
                             <p class="text-xl font-bold text-red-600">₹{{ refund.amount }}</p>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Payment Method</p>
-                            <p class="font-semibold">
-                                {% if refund.payment_method == 'upi' %}
-                                    <i class="fab fa-google-pay text-blue-600"></i> UPI
-                                {% else %}
-                                    <i class="fas fa-credit-card text-purple-600"></i> Card
-                                {% endif %}
-                            </p>
-                        </div>
-                        <div>
                             <p class="text-sm text-gray-500">Status</p>
                             <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold 
                                 {% if refund.status == 'pending' %}bg-yellow-100 text-yellow-600
                                 {% elif refund.status == 'approved' %}bg-blue-100 text-blue-600
                                 {% elif refund.status == 'processing' %}bg-purple-100 text-purple-600
+                                {% elif refund.status == 'credited' %}bg-green-100 text-green-600
+                                {% elif refund.status == 'debited' %}bg-orange-100 text-orange-600
                                 {% elif refund.status == 'completed' %}bg-green-100 text-green-600
                                 {% else %}bg-red-100 text-red-600{% endif %}">
                                 {{ refund.get_status_display }}
@@ -264,108 +255,131 @@
                     </div>
                     
                     <div class="bg-gray-50 p-3 rounded-lg mb-3">
-                        <p class="text-sm font-semibold text-gray-700 mb-1">Your Reason for Cancellation</p>
+                        <p class="text-sm font-semibold text-gray-700 mb-1">Your Reason</p>
                         <p class="text-sm text-gray-600">{{ refund.refund_reason|default:"Not specified" }}</p>
                     </div>
                     
-                    <!-- Seller's Message/Action -->
-                    {% if refund.status == 'approved' %}
+                    <!-- CREDITED Status Message - Updated for Buyer -->
+                    {% if refund.status == 'credited' %}
                     <div class="bg-green-50 p-4 rounded-lg mb-3 border-l-4 border-green-500">
                         <div class="flex items-start">
-                            <i class="fas fa-check-circle text-green-600 text-xl mt-1 mr-3"></i>
+                            <i class="fas fa-check-double text-green-700 text-xl mt-1 mr-3"></i>
                             <div class="flex-1">
-                                <p class="font-semibold text-green-800">✅ Refund Approved by Seller</p>
-                                <p class="text-sm text-green-700 mt-1">Your refund request has been approved by the seller.</p>
-                                <p class="text-xs text-green-600 mt-2">Refund will be processed to your {{ refund.payment_method|upper }} account within 3-5 business days.</p>
+                                <p class="font-semibold text-green-800">✅ Refund Credited to You!</p>
+                                <p class="text-sm text-green-700 mt-1">The refund amount of <strong>₹{{ refund.amount }}</strong> has been successfully credited to your {{ refund.payment_method|upper }} account.</p>
+                                {% if refund.admin_notes %}
+                                <p class="text-xs text-green-600 mt-2">Transaction Reference: {{ refund.admin_notes }}</p>
+                                {% endif %}
+                                <p class="text-xs text-green-500 mt-2">Funds should reflect in your account within 2-3 business days.</p>
                             </div>
                         </div>
                     </div>
                     {% endif %}
                     
+                    <!-- Debited Status Message -->
+                    {% if refund.status == 'debited' %}
+                    <div class="bg-orange-50 p-4 rounded-lg mb-3 border-l-4 border-orange-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-exchange-alt text-orange-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-orange-800">🔄 Refund Processed</p>
+                                <p class="text-sm text-orange-700 mt-1">The refund amount of <strong>₹{{ refund.amount }}</strong> has been debited from the seller's account and is being processed to your {{ refund.payment_method|upper }} account.</p>
+                                {% if refund.admin_notes %}
+                                <p class="text-xs text-orange-600 mt-2">Reference: {{ refund.admin_notes }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Approved Status Message -->
+                    {% if refund.status == 'approved' %}
+                    <div class="bg-blue-50 p-4 rounded-lg mb-3 border-l-4 border-blue-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-clock text-blue-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-blue-800">⏳ Refund Approved</p>
+                                <p class="text-sm text-blue-700 mt-1">Your refund request has been approved by the seller. They will process the refund shortly.</p>
+                                <p class="text-xs text-blue-600 mt-2">Expected timeline: 3-5 business days</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Processing Status Message -->
                     {% if refund.status == 'processing' %}
                     <div class="bg-purple-50 p-4 rounded-lg mb-3 border-l-4 border-purple-500">
                         <div class="flex items-start">
                             <i class="fas fa-spinner fa-pulse text-purple-600 text-xl mt-1 mr-3"></i>
                             <div class="flex-1">
                                 <p class="font-semibold text-purple-800">🔄 Refund Processing</p>
-                                <p class="text-sm text-purple-700 mt-1">The seller has initiated the refund process.</p>
-                                <p class="text-xs text-purple-600 mt-2">The amount will be credited to your account shortly.</p>
+                                <p class="text-sm text-purple-700 mt-1">The seller has initiated the refund process. Your refund is being processed.</p>
+                                <p class="text-xs text-purple-600 mt-2">Funds will be credited within 3-5 business days.</p>
                             </div>
                         </div>
                     </div>
                     {% endif %}
                     
+                    <!-- Completed Status Message -->
                     {% if refund.status == 'completed' %}
-                    <div class="bg-green-100 p-4 rounded-lg mb-3 border-l-4 border-green-600">
+                    <div class="bg-green-50 p-4 rounded-lg mb-3 border-l-4 border-green-500">
                         <div class="flex items-start">
-                            <i class="fas fa-check-double text-green-700 text-xl mt-1 mr-3"></i>
+                            <i class="fas fa-check-circle text-green-600 text-xl mt-1 mr-3"></i>
                             <div class="flex-1">
                                 <p class="font-semibold text-green-800">✅ Refund Completed</p>
-                                <p class="text-sm text-green-700 mt-1">Amount ₹{{ refund.amount }} has been successfully refunded to your {{ refund.payment_method|upper }} account.</p>
-                                <p class="text-xs text-green-600 mt-2">Refund Date: {{ refund.updated_at|date:"M d, Y" }}</p>
+                                <p class="text-sm text-green-700 mt-1">Refund amount <strong>₹{{ refund.amount }}</strong> has been successfully processed.</p>
+                                {% if refund.admin_notes %}
+                                <p class="text-xs text-green-600 mt-2">Reference: {{ refund.admin_notes }}</p>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                     {% endif %}
                     
-                    {% if refund.status == 'rejected' %}
-                    <div class="bg-red-50 p-4 rounded-lg mb-3 border-l-4 border-red-500">
-                        <div class="flex items-start">
-                            <i class="fas fa-times-circle text-red-600 text-xl mt-1 mr-3"></i>
-                            <div class="flex-1">
-                                <p class="font-semibold text-red-800">❌ Refund Rejected by Seller</p>
-                                <div class="mt-2 p-3 bg-red-100 rounded-lg">
-                                    <p class="text-sm font-medium text-red-800">Reason from Seller:</p>
-                                    <p class="text-sm text-red-700 mt-1">{{ refund.rejection_reason|default:"No reason provided by seller." }}</p>
-                                </div>
-                                <p class="text-xs text-red-600 mt-3">If you believe this rejection was unfair, you can file a complaint against the seller.</p>
-                                <a href="{% url 'file_complaint' %}?seller={{ refund.order.items.first.product.seller.id }}&order={{ refund.order.id }}" class="inline-block mt-2 text-sm bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">
-                                    <i class="fas fa-gavel mr-1"></i> File Complaint Against Seller
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-                    
+                    <!-- Pending Status Message -->
                     {% if refund.status == 'pending' %}
                     <div class="bg-yellow-50 p-4 rounded-lg mb-3 border-l-4 border-yellow-500">
                         <div class="flex items-start">
                             <i class="fas fa-clock text-yellow-600 text-xl mt-1 mr-3"></i>
                             <div class="flex-1">
-                                <p class="font-semibold text-yellow-800">⏳ Waiting for Seller's Response</p>
-                                <p class="text-sm text-yellow-700 mt-1">Your refund request has been submitted and is pending seller approval.</p>
+                                <p class="font-semibold text-yellow-800">⏳ Pending Seller Approval</p>
+                                <p class="text-sm text-yellow-700 mt-1">Your refund request has been submitted and is awaiting seller approval.</p>
                                 <p class="text-xs text-yellow-600 mt-2">Sellers typically respond within 2-3 business days.</p>
                             </div>
                         </div>
                     </div>
                     {% endif %}
                     
-                    <!-- Payment Details for Verification -->
+                    <!-- Rejected Status -->
+                    {% if refund.status == 'rejected' %}
+                    <div class="bg-red-50 p-4 rounded-lg mb-3 border-l-4 border-red-500">
+                        <div class="flex items-start">
+                            <i class="fas fa-times-circle text-red-600 text-xl mt-1 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-semibold text-red-800">❌ Refund Rejected</p>
+                                {% if refund.rejection_reason %}
+                                <p class="text-sm text-red-700 mt-1"><strong>Reason:</strong> {{ refund.rejection_reason }}</p>
+                                {% endif %}
+                                <p class="text-xs text-red-600 mt-2">You can file a complaint if you believe this rejection was unfair.</p>
+                                <a href="{% url 'file_complaint' %}?seller={{ refund.order.items.first.product.seller.id }}&order={{ refund.order.id }}" class="inline-block mt-2 text-sm text-red-600 hover:text-red-800 font-semibold">
+                                    <i class="fas fa-gavel mr-1"></i> File Complaint
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Payment Details -->
                     <div class="bg-gray-50 p-3 rounded-lg mt-2">
                         <p class="text-sm font-semibold text-gray-700 mb-2">Refund Account Details</p>
                         {% if refund.payment_method == 'upi' and refund.upi_id %}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <div><span class="text-gray-600">UPI ID:</span> <span class="font-mono">{{ refund.upi_id }}</span></div>
-                            <div><span class="text-gray-600">Refund Amount:</span> <span class="font-bold text-green-600">₹{{ refund.amount }}</span></div>
-                        </div>
+                        <p class="text-sm"><span class="text-gray-600">UPI ID:</span> {{ refund.upi_id }}</p>
                         {% endif %}
                         {% if refund.payment_method == 'card' %}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <div><span class="text-gray-600">Account Holder:</span> {{ refund.account_holder_name }}</div>
-                            <div><span class="text-gray-600">Bank Name:</span> {{ refund.bank_name }}</div>
-                            <div><span class="text-gray-600">Account No:</span> ****{{ refund.account_number|slice:"-4:" }}</div>
-                            <div><span class="text-gray-600">IFSC Code:</span> {{ refund.ifsc_code }}</div>
-                            <div><span class="text-gray-600">Refund Amount:</span> <span class="font-bold text-green-600">₹{{ refund.amount }}</span></div>
-                        </div>
+                        <p class="text-sm"><span class="text-gray-600">Account:</span> {{ refund.account_holder_name }} - {{ refund.bank_name }}</p>
+                        <p class="text-sm"><span class="text-gray-600">Account No:</span> ****{{ refund.account_number|slice:"-4:" }}</p>
                         {% endif %}
-                    </div>
-                    
-                    <!-- Order Timeline -->
-                    <div class="mt-4 pt-3 border-t">
-                        <p class="text-xs text-gray-500">Requested on: {{ refund.created_at|date:"M d, Y H:i" }}</p>
-                        {% if refund.updated_at != refund.created_at %}
-                        <p class="text-xs text-gray-500">Last updated: {{ refund.updated_at|date:"M d, Y H:i" }}</p>
-                        {% endif %}
+                        <p class="text-xs text-gray-400 mt-1">Requested on: {{ refund.created_at|date:"M d, Y H:i" }}</p>
                     </div>
                 </div>
             </div>

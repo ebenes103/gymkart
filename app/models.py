@@ -177,10 +177,9 @@ class Order(models.Model):
     order_id = models.CharField(max_length=20, unique=True, blank=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
-    payment_status = models.BooleanField(default=False)  # True = paid, False = pending
+    payment_status = models.BooleanField(default=False)
     order_status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='pending')
     
-    # Shipping details
     shipping_name = models.CharField(max_length=200, blank=True, null=True)
     shipping_address = models.TextField(blank=True, null=True)
     shipping_city = models.CharField(max_length=100, blank=True, null=True)
@@ -188,9 +187,13 @@ class Order(models.Model):
     shipping_pincode = models.CharField(max_length=10, blank=True, null=True)
     shipping_phone = models.CharField(max_length=15, blank=True, null=True)
     
-    # Tracking
     tracking_number = models.CharField(max_length=50, blank=True, null=True)
     tracking_url = models.URLField(blank=True, null=True)
+    
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_signature = models.CharField(max_length=200, blank=True, null=True)
+
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -204,13 +207,12 @@ class Order(models.Model):
     
     def __str__(self):
         return f"Order {self.order_id} - {self.user.username}"
-
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     weight = models.CharField(max_length=20, blank=True, null=True)
     quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # Price at time of order
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     
     def __str__(self):
         return f"{self.quantity}x {self.product.name}"
@@ -233,6 +235,7 @@ class Return(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     return_type = models.CharField(max_length=20, choices=RETURN_TYPE_CHOICES)
     reason = models.TextField()
+    rejection_reason = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to='returns/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=RETURN_STATUS_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -270,6 +273,7 @@ class Complaint(models.Model):
     
     def __str__(self):
         return f"Complaint {self.id} - {self.user.username} vs {self.seller.username}"
+
 class Refund(models.Model):
     REFUND_STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -278,6 +282,8 @@ class Refund(models.Model):
         ('completed', 'Completed'),
         ('rejected', 'Rejected'),
         ('admin_warning', 'Admin Warning - Action Required'),
+        ('credited', 'Credited to Customer'),
+        ('debited', 'Debited from Seller'),
     )
     
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='refund')
@@ -286,8 +292,18 @@ class Refund(models.Model):
     payment_method = models.CharField(max_length=10)
     refund_reason = models.TextField(blank=True, null=True)
     rejection_reason = models.TextField(blank=True, null=True)
-    admin_warning_note = models.TextField(blank=True, null=True)  # Add this field
-    admin_warning_date = models.DateTimeField(blank=True, null=True)  # Add this field
+    admin_warning_note = models.TextField(blank=True, null=True)
+    admin_warning_date = models.DateTimeField(blank=True, null=True)
+    
+    # Proof of Refund (Uploaded by Seller)
+    proof_image = models.ImageField(upload_to='refund_proofs/', blank=True, null=True)
+    proof_uploaded_at = models.DateTimeField(blank=True, null=True)
+    proof_notes = models.TextField(blank=True, null=True)
+    
+    # Admin verification
+    admin_verified = models.BooleanField(default=False)
+    admin_verified_at = models.DateTimeField(blank=True, null=True)
+    admin_notes = models.TextField(blank=True, null=True)
     
     # For UPI Refund
     upi_id = models.CharField(max_length=100, blank=True, null=True)

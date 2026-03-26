@@ -7,13 +7,63 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.contrib import messages
 from django.utils import timezone
+from django.http import JsonResponse
 from decimal import Decimal
+from django.conf import settings
 import json, random, datetime
+import razorpay
+
+# Initialize Razorpay client (ONCE)
+razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+
+
+# Helper function to create order
+def create_order(request, cart_items, total, payment_method, shipping_name, shipping_address, 
+                 shipping_city, shipping_state, shipping_pincode, shipping_phone, payment_status=False, razorpay_data=None):
+    """Helper function to create order"""
+    order = Order.objects.create(
+        user=request.user,
+        total_amount=total,
+        payment_method=payment_method,
+        payment_status=payment_status,
+        shipping_name=shipping_name,
+        shipping_address=shipping_address,
+        shipping_city=shipping_city,
+        shipping_state=shipping_state,
+        shipping_pincode=shipping_pincode,
+        shipping_phone=shipping_phone,
+    )
+    
+    # Add Razorpay details if provided
+    if razorpay_data:
+        order.razorpay_order_id = razorpay_data.get('razorpay_order_id')
+        order.razorpay_payment_id = razorpay_data.get('razorpay_payment_id')
+        order.razorpay_signature = razorpay_data.get('razorpay_signature')
+        order.save()
+    
+    # Create order items and update stock
+    for item in cart_items:
+        OrderItem.objects.create(
+            order=order,
+            product=item.product,
+            weight=item.weight,
+            quantity=item.quantity,
+            price=item.product.price
+        )
+        
+        # Update stock
+        if item.weight and item.weight in item.product.stock_per_weight:
+            item.product.stock_per_weight[item.weight] -= item.quantity
+            item.product.save()
+    
+    # Clear cart
+    cart_items.delete()
+    
+    return order
 
 
 # Public pages (no login required)
 def login_view(request):
-    # If user is already logged in, redirect to appropriate page
     if request.user.is_authenticated:
         if request.user.is_superuser:
             return redirect('admin_dashboard')
@@ -36,19 +86,12 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-
-            # ADMIN LOGIN
             if user.is_superuser:
                 return redirect('admin_dashboard')
-
             try:
                 profile = Profile.objects.get(user=user)
-
-                # Buyer Login
                 if profile.role == "buyer":
                     return redirect('home')
-
-                # Seller Login
                 elif profile.role == "seller":
                     if profile.seller_approved:
                         return redirect('seller_dashboard')
@@ -56,7 +99,6 @@ def login_view(request):
                         return render(request, 'waiting_approval.html')
             except Profile.DoesNotExist:
                 return redirect('home')
-
         else:
             return render(request, 'login.html', {'error': 'Invalid username or password'})
 
@@ -64,7 +106,6 @@ def login_view(request):
 
 
 def register_view(request):
-    # If already logged in, redirect to home
     if request.user.is_authenticated:
         return redirect('home')
     
@@ -82,7 +123,6 @@ def register_view(request):
     return render(request, 'register.html', {'form': form})
 
 
-# Protected pages (login required)
 @login_required(login_url='login')
 def home(request):
     query = request.GET.get('q')
@@ -94,7 +134,6 @@ def home(request):
         )[:4]
     else:
         products = Product.objects.all()[:4]
-    
     return render(request, 'home.html', {'products': products})
 
 
@@ -102,22 +141,15 @@ def home(request):
 def product_list(request):
     query = request.GET.get('q', '')
     category = request.GET.get('category', '')
-    
-    # Start with all products
     products = Product.objects.all().order_by('-created_at')
-    
-    # Filter by search query if provided
     if query:
         products = products.filter(
             Q(name__icontains=query) |
             Q(brand__icontains=query) |
             Q(category__icontains=query)
         )
-    
-    # Filter by category if provided
     if category:
         products = products.filter(category__iexact=category)
-    
     return render(request, 'product_list.html', {'products': products})
 
 
@@ -130,7 +162,6 @@ def product_detail(request, id):
 # Seller only pages
 @login_required(login_url='login')
 def seller_dashboard(request):
-    # Check if user is a seller
     try:
         profile = Profile.objects.get(user=request.user)
         if profile.role != 'seller':
@@ -141,11 +172,9 @@ def seller_dashboard(request):
         return redirect('home')
     
     products = Product.objects.filter(seller=request.user).order_by('-created_at')
-    
     total_products = products.count()
     low_stock_products = 0
     out_of_stock = 0
-    
     for product in products:
         total = product.get_total_stock()
         if total == 0:
@@ -153,73 +182,46 @@ def seller_dashboard(request):
         elif total < 10:
             low_stock_products += 1
     
-    # Get orders containing this seller's products
     seller_products = Product.objects.filter(seller=request.user)
-    
-    # Active orders
     active_statuses = ['pending', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered']
     active_orders = Order.objects.filter(
         items__product__in=seller_products,
         order_status__in=active_statuses
     ).distinct().order_by('-created_at')
-    
-    # Cancelled orders
     cancelled_orders = Order.objects.filter(
         items__product__in=seller_products,
         order_status='cancelled'
     ).distinct().order_by('-created_at')
-    
     total_active_orders = active_orders.count()
     total_cancelled_orders = cancelled_orders.count()
-    
-    # Returns
     returns = Return.objects.filter(product__in=seller_products).order_by('-created_at')
-    pending_returns = returns.filter(status='pending')
-    pending_returns_count = pending_returns.count()
-    
-    # Refunds
+    pending_returns_count = returns.filter(status='pending').count()
     refunds = Refund.objects.filter(order__items__product__in=seller_products).distinct().order_by('-created_at')
-    pending_refunds = refunds.filter(status='pending')
-    pending_refunds_count = pending_refunds.count()
-    
-    # Admin messages (complaints against this seller)
+    pending_refunds_count = refunds.filter(status='pending').count()
     admin_messages = Complaint.objects.filter(seller=request.user).order_by('-created_at')
     admin_messages_count = admin_messages.count()
     
-    # Get low stock items for alert
     low_stock_items = []
     for product in products:
         low_stock = product.get_low_stock_weights()
         if low_stock:
-            low_stock_items.append({
-                'product': product,
-                'low_stock_weights': low_stock
-            })
+            low_stock_items.append({'product': product, 'low_stock_weights': low_stock})
     
     context = {
-        'products': products,
-        'total_products': total_products,
-        'low_stock_products': low_stock_products,
-        'out_of_stock': out_of_stock,
-        'low_stock_items': low_stock_items,
-        'active_orders': active_orders,
-        'cancelled_orders': cancelled_orders,
-        'total_active_orders': total_active_orders,
-        'total_cancelled_orders': total_cancelled_orders,
-        'returns': returns,
-        'pending_returns_count': pending_returns_count,
-        'refunds': refunds,
-        'pending_refunds_count': pending_refunds_count,
-        'admin_messages': admin_messages,
+        'products': products, 'total_products': total_products,
+        'low_stock_products': low_stock_products, 'out_of_stock': out_of_stock,
+        'low_stock_items': low_stock_items, 'active_orders': active_orders,
+        'cancelled_orders': cancelled_orders, 'total_active_orders': total_active_orders,
+        'total_cancelled_orders': total_cancelled_orders, 'returns': returns,
+        'pending_returns_count': pending_returns_count, 'refunds': refunds,
+        'pending_refunds_count': pending_refunds_count, 'admin_messages': admin_messages,
         'admin_messages_count': admin_messages_count,
     }
-    
     return render(request, 'seller_dashboard.html', context)
 
 
 @login_required(login_url='login')
 def add_product(request):
-    # Check if user is an approved seller
     try:
         profile = Profile.objects.get(user=request.user)
         if profile.role != 'seller':
@@ -234,25 +236,16 @@ def add_product(request):
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES)
         formset = ProductImageFormSet(request.POST, request.FILES)
-        
         if form.is_valid() and formset.is_valid():
             product = form.save(commit=False)
             product.seller = request.user
-            
-            # Handle available weights
             if form.cleaned_data.get('available_weights_input'):
                 product.available_weights = form.cleaned_data['available_weights_input']
-            
-            # Handle stock per weight
             if form.cleaned_data.get('stock_per_weight_input'):
                 product.stock_per_weight = form.cleaned_data['stock_per_weight_input']
-            
             product.save()
-            
-            # Save extra images
             formset.instance = product
             formset.save()
-            
             messages.success(request, "Product added successfully!")
             return redirect("seller_dashboard")
         else:
@@ -260,24 +253,18 @@ def add_product(request):
     else:
         form = ProductForm()
         formset = ProductImageFormSet()
-    
     return render(request, 'add_product.html', {'form': form, 'formset': formset})
 
 
 @login_required(login_url='login')
 def add_product_rating(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    
     if request.method == 'POST':
         form = ProductRatingForm(request.POST)
         if form.is_valid():
             rating, created = ProductRating.objects.update_or_create(
-                product=product,
-                user=request.user,
-                defaults={
-                    'rating': form.cleaned_data['rating'],
-                    'review': form.cleaned_data['review']
-                }
+                product=product, user=request.user,
+                defaults={'rating': form.cleaned_data['rating'], 'review': form.cleaned_data['review']}
             )
             messages.success(request, "Thank you for rating this product! ⭐")
     return redirect('product_detail', id=product_id)
@@ -294,37 +281,25 @@ def delete_product_rating(request, rating_id):
 @login_required(login_url='login')
 def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    
-    # Check if user owns this product
     if product.seller != request.user:
         return redirect('seller_dashboard')
     
     if request.method == "POST":
         form = ProductForm(request.POST, request.FILES, instance=product)
         formset = ProductImageFormSet(request.POST, request.FILES, instance=product)
-        
         if form.is_valid() and formset.is_valid():
             product = form.save(commit=False)
-            
-            # Get the parsed data from form
             if form.cleaned_data.get('available_weights_input'):
                 product.available_weights = form.cleaned_data['available_weights_input']
             if form.cleaned_data.get('stock_per_weight_input'):
                 product.stock_per_weight = form.cleaned_data['stock_per_weight_input']
-            
             product.save()
             formset.save()
-            
             return redirect('seller_dashboard')
     else:
         form = ProductForm(instance=product)
         formset = ProductImageFormSet(instance=product)
-    
-    return render(request, 'edit_product.html', {
-        'form': form, 
-        'formset': formset, 
-        'product': product
-    })
+    return render(request, 'edit_product.html', {'form': form, 'formset': formset, 'product': product})
 
 
 @login_required(login_url='login')
@@ -340,12 +315,8 @@ def add_to_cart(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     quantity = int(request.POST.get("quantity", 1))
     weight = request.POST.get("weight", "")
-    
-    # Check if weight is required for this product
     if product.available_weights and not weight:
         return redirect('product_detail', id=product_id)
-    
-    # Check stock availability
     if weight and weight in product.stock_per_weight:
         available_stock = product.stock_per_weight[weight]
         if available_stock < quantity:
@@ -353,18 +324,12 @@ def add_to_cart(request, product_id):
     elif product.get_total_stock() < quantity:
         return redirect('product_detail', id=product_id)
     
-    # Create or update cart item
     cart_item, created = CartItem.objects.get_or_create(
-        user=request.user,
-        product=product,
-        weight=weight,
-        defaults={'quantity': quantity}
+        user=request.user, product=product, weight=weight, defaults={'quantity': quantity}
     )
-    
     if not created:
         cart_item.quantity += quantity
         cart_item.save()
-    
     return redirect('product_detail', id=product_id)
 
 
@@ -379,10 +344,7 @@ def remove_from_cart(request, item_id):
 def cart(request):
     cart_items = CartItem.objects.filter(user=request.user)
     total = sum(item.total_price() for item in cart_items)
-    return render(request, "cart.html", {
-        "cart_items": cart_items,
-        "total": total
-    })
+    return render(request, "cart.html", {"cart_items": cart_items, "total": total})
 
 
 # Wishlist views
@@ -395,12 +357,7 @@ def wishlist(request):
 @login_required(login_url='login')
 def add_to_wishlist(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    
-    wishlist_item, created = Wishlist.objects.get_or_create(
-        user=request.user,
-        product=product
-    )
-    
+    wishlist_item, created = Wishlist.objects.get_or_create(user=request.user, product=product)
     return redirect(request.META.get('HTTP_REFERER', 'product_list'))
 
 
@@ -420,23 +377,19 @@ def admin_dashboard(request):
     total_users = User.objects.count()
     total_newsletters = Newsletter.objects.count()
     recent_newsletters = Newsletter.objects.all()[:10]
-    
-    # Get complaints
     complaints = Complaint.objects.all().order_by('-created_at')
     pending_complaints_count = complaints.filter(status='pending').count()
+    refunds = Refund.objects.all().order_by('-created_at')
+    pending_refunds = refunds.filter(status__in=['pending', 'approved', 'processing'])
+    pending_refunds_count = pending_refunds.count()
 
     context = {
-        "profiles": profiles,
-        "pending_sellers": pending_sellers,
-        "approved_sellers": approved_sellers,
-        "total_buyers": total_buyers,
-        "total_users": total_users,
-        "total_newsletters": total_newsletters,
-        "recent_newsletters": recent_newsletters,
-        "complaints": complaints,
-        "pending_complaints_count": pending_complaints_count,
+        "profiles": profiles, "pending_sellers": pending_sellers, "approved_sellers": approved_sellers,
+        "total_buyers": total_buyers, "total_users": total_users, "total_newsletters": total_newsletters,
+        "recent_newsletters": recent_newsletters, "complaints": complaints,
+        "pending_complaints_count": pending_complaints_count, "refunds": refunds,
+        "pending_refunds": pending_refunds, "pending_refunds_count": pending_refunds_count,
     }
-
     return render(request, "admin_dashboard.html", context)
 
 
@@ -451,13 +404,8 @@ def approve_seller(request, user_id):
 def subscribe_newsletter(request):
     if request.method == 'POST':
         email = request.POST.get('email')
-        
         if email:
-            subscriber, created = Newsletter.objects.get_or_create(
-                email=email,
-                defaults={'is_active': True}
-            )
-            
+            subscriber, created = Newsletter.objects.get_or_create(email=email, defaults={'is_active': True})
             if created:
                 messages.success(request, f"Thank you for subscribing to our newsletter! 🎉")
             else:
@@ -469,7 +417,6 @@ def subscribe_newsletter(request):
                     messages.success(request, "Welcome back! You've been resubscribed to our newsletter. 🏋️")
         else:
             messages.error(request, "Please provide a valid email address.")
-    
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
 
@@ -484,28 +431,20 @@ def reject_seller(request, user_id):
 @login_required(login_url='login')
 def notify_me(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    
-    # Check if product is out of stock
     if product.get_total_stock() > 0:
         messages.info(request, f"{product.name} is back in stock! You can purchase it now.")
         return redirect('product_detail', id=product_id)
-    
-    # Create or get notification
     notification, created = NotifyMe.objects.get_or_create(
-        product=product,
-        user=request.user,
-        defaults={'email': request.user.email}
+        product=product, user=request.user, defaults={'email': request.user.email}
     )
-    
     if created:
         messages.success(request, f"We'll notify you when {product.name} is back in stock! 📧")
     else:
         messages.info(request, f"You're already on the waitlist for {product.name}")
-    
     return redirect('product_detail', id=product_id)
 
 
-# Order views
+# Order views with Razorpay Integration
 @login_required(login_url='login')
 def checkout(request):
     cart_items = CartItem.objects.filter(user=request.user)
@@ -531,54 +470,124 @@ def checkout(request):
             return render(request, 'checkout.html', {
                 'cart_items': cart_items,
                 'total': total,
-                'shipping_name': shipping_name,
-                'shipping_address': shipping_address,
-                'shipping_city': shipping_city,
-                'shipping_state': shipping_state,
-                'shipping_pincode': shipping_pincode,
-                'shipping_phone': shipping_phone,
-                'payment_method': payment_method,
             })
         
-        # Create order
-        order = Order.objects.create(
-            user=request.user,
-            total_amount=total,
-            payment_method=payment_method,
-            payment_status=True if payment_method != 'cod' else False,
-            shipping_name=shipping_name,
-            shipping_address=shipping_address,
-            shipping_city=shipping_city,
-            shipping_state=shipping_state,
-            shipping_pincode=shipping_pincode,
-            shipping_phone=shipping_phone,
-        )
+        # For COD orders
+        if payment_method == 'cod':
+            order = create_order(request, cart_items, total, payment_method, shipping_name, shipping_address, 
+                                shipping_city, shipping_state, shipping_pincode, shipping_phone, payment_status=False)
+            messages.success(request, f"Order placed successfully! Order ID: {order.order_id}")
+            return redirect('order_confirmation', order_id=order.id)
         
-        # Create order items and update stock
-        for item in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                weight=item.weight,
-                quantity=item.quantity,
-                price=item.product.price
-            )
-            
-            # Update stock
-            if item.weight and item.weight in item.product.stock_per_weight:
-                item.product.stock_per_weight[item.weight] -= item.quantity
-                item.product.save()
-        
-        # Clear cart
-        cart_items.delete()
-        
-        messages.success(request, f"Order placed successfully! Order ID: {order.order_id}")
-        return redirect('order_confirmation', order_id=order.id)
+        # For Razorpay (UPI/Card)
+        elif payment_method in ['upi', 'card']:
+            try:
+                # Create Razorpay order using global client
+                razorpay_order = razorpay_client.order.create({
+                    'amount': int(total * 100),
+                    'currency': 'INR',
+                    'payment_capture': 1
+                })
+                
+                # Store order details in session
+                request.session['razorpay_order_id'] = razorpay_order['id']
+                request.session['order_details'] = {
+                    'payment_method': payment_method,
+                    'shipping_name': shipping_name,
+                    'shipping_address': shipping_address,
+                    'shipping_city': shipping_city,
+                    'shipping_state': shipping_state,
+                    'shipping_pincode': shipping_pincode,
+                    'shipping_phone': shipping_phone,
+                    'total': str(total),
+                }
+                
+                # Render Razorpay payment page
+                return render(request, 'razorpay_payment.html', {
+                    'cart_items': cart_items,
+                    'total': total,
+                    'razorpay_order_id': razorpay_order['id'],
+                    'razorpay_key_id': settings.RAZORPAY_KEY_ID,
+                    'amount': int(total * 100),
+                    'payment_method': payment_method,
+                    'shipping_name': shipping_name,
+                    'shipping_address': shipping_address,
+                    'shipping_city': shipping_city,
+                    'shipping_state': shipping_state,
+                    'shipping_pincode': shipping_pincode,
+                    'shipping_phone': shipping_phone,
+                })
+            except Exception as e:
+                messages.error(request, f"Payment initialization failed: {str(e)}")
+                return redirect('cart')
     
     return render(request, 'checkout.html', {
         'cart_items': cart_items,
         'total': total,
     })
+
+
+@login_required(login_url='login')
+def payment_success(request):
+    """Handle successful Razorpay payment"""
+    razorpay_order_id = request.session.get('razorpay_order_id')
+    order_details = request.session.get('order_details')
+    
+    if not razorpay_order_id or not order_details:
+        messages.error(request, "Invalid payment session")
+        return redirect('cart')
+    
+    payment_id = request.GET.get('payment_id')
+    razorpay_signature = request.GET.get('signature')
+    
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': payment_id,
+            'razorpay_signature': razorpay_signature
+        })
+        
+        cart_items = CartItem.objects.filter(user=request.user)
+        if not cart_items:
+            messages.error(request, "Cart is empty")
+            return redirect('cart')
+        
+        total = Decimal(order_details['total'])
+        
+        order = create_order(
+            request, cart_items, total, order_details['payment_method'],
+            order_details['shipping_name'], order_details['shipping_address'],
+            order_details['shipping_city'], order_details['shipping_state'],
+            order_details['shipping_pincode'], order_details['shipping_phone'],
+            payment_status=True,
+            razorpay_data={
+                'razorpay_order_id': razorpay_order_id,
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': razorpay_signature
+            }
+        )
+        
+        del request.session['razorpay_order_id']
+        del request.session['order_details']
+        
+        messages.success(request, f"Payment successful! Order ID: {order.order_id}")
+        return redirect('order_confirmation', order_id=order.id)
+        
+    except Exception as e:
+        messages.error(request, f"Payment verification failed: {str(e)}")
+        return redirect('cart')
+
+
+@login_required(login_url='login')
+def payment_failed(request):
+    """Handle failed Razorpay payment"""
+    if 'razorpay_order_id' in request.session:
+        del request.session['razorpay_order_id']
+    if 'order_details' in request.session:
+        del request.session['order_details']
+    
+    messages.error(request, "Payment failed or was cancelled. Please try again.")
+    return redirect('cart')
 
 
 @login_required(login_url='login')
@@ -589,35 +598,17 @@ def order_confirmation(request, order_id):
 
 @login_required(login_url='login')
 def my_orders(request):
-    # Active orders (not cancelled)
-    active_orders = Order.objects.filter(
-        user=request.user
-    ).exclude(order_status='cancelled').order_by('-created_at')
-    
-    # Cancelled orders
-    cancelled_orders = Order.objects.filter(
-        user=request.user,
-        order_status='cancelled'
-    ).order_by('-created_at')
-    
-    # Return requests
+    active_orders = Order.objects.filter(user=request.user).exclude(order_status='cancelled').order_by('-created_at')
+    cancelled_orders = Order.objects.filter(user=request.user, order_status='cancelled').order_by('-created_at')
     returns = Return.objects.filter(user=request.user).order_by('-created_at')
-    
-    # Refund requests
     refunds = Refund.objects.filter(user=request.user).order_by('-created_at')
-    
     context = {
-        'active_orders': active_orders,
-        'active_orders_count': active_orders.count(),
-        'cancelled_orders': cancelled_orders,
-        'cancelled_orders_count': cancelled_orders.count(),
-        'returns': returns,
-        'returns_count': returns.count(),
-        'refunds': refunds,
-        'refunds_count': refunds.count(),
+        'active_orders': active_orders, 'active_orders_count': active_orders.count(),
+        'cancelled_orders': cancelled_orders, 'cancelled_orders_count': cancelled_orders.count(),
+        'returns': returns, 'returns_count': returns.count(),
+        'refunds': refunds, 'refunds_count': refunds.count(),
         'now': timezone.now(),
     }
-    
     return render(request, 'my_orders.html', context)
 
 
@@ -630,20 +621,16 @@ def order_detail(request, order_id):
 @login_required(login_url='login')
 def cancel_order(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    
     if order.order_status in ['pending', 'confirmed']:
-        # Restore stock
         for item in order.items.all():
             if item.weight and item.weight in item.product.stock_per_weight:
                 item.product.stock_per_weight[item.weight] += item.quantity
                 item.product.save()
-        
         order.order_status = 'cancelled'
         order.save()
         messages.success(request, "Order cancelled successfully!")
     else:
         messages.error(request, "Order cannot be cancelled at this stage.")
-    
     return redirect('my_orders')
 
 
@@ -651,8 +638,6 @@ def cancel_order(request, order_id):
 def seller_update_order_status(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     seller_products = Product.objects.filter(seller=request.user)
-    
-    # Check if order contains seller's products
     if not order.items.filter(product__in=seller_products).exists():
         messages.error(request, "You don't have permission to update this order")
         return redirect('seller_dashboard')
@@ -661,7 +646,6 @@ def seller_update_order_status(request, order_id):
         new_status = request.POST.get('order_status')
         tracking_number = request.POST.get('tracking_number')
         tracking_url = request.POST.get('tracking_url')
-        
         if new_status in ['pending', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled']:
             order.order_status = new_status
             if tracking_number:
@@ -672,7 +656,6 @@ def seller_update_order_status(request, order_id):
             messages.success(request, f"Order status updated to {order.get_order_status_display()}")
         else:
             messages.error(request, "Invalid status")
-    
     return redirect('seller_dashboard')
 
 
@@ -680,89 +663,62 @@ def seller_update_order_status(request, order_id):
 @login_required(login_url='login')
 def request_refund(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
-    
-    # Check if order can be cancelled (only pending/confirmed orders)
     if order.order_status not in ['pending', 'confirmed']:
         messages.error(request, "This order cannot be cancelled at this stage.")
         return redirect('order_detail', order_id=order.id)
     
-    # Check if COD - no refund needed
     if order.payment_method == 'cod':
-        # For COD orders, just cancel without refund
         for item in order.items.all():
             if item.weight and item.weight in item.product.stock_per_weight:
                 item.product.stock_per_weight[item.weight] += item.quantity
                 item.product.save()
-        
         order.order_status = 'cancelled'
         order.save()
         messages.success(request, "Order cancelled successfully!")
         return redirect('my_orders')
     
-    # For UPI and Card payments - show refund form
     if request.method == 'POST':
         refund_reason = request.POST.get('refund_reason')
-        
         if order.payment_method == 'upi':
             upi_id = request.POST.get('upi_id')
             if not upi_id:
                 messages.error(request, "Please provide UPI ID for refund")
                 return render(request, 'refund_form.html', {'order': order})
-            
             Refund.objects.create(
-                order=order,
-                user=request.user,
-                amount=order.total_amount,
-                payment_method='upi',
-                refund_reason=refund_reason,
-                upi_id=upi_id,
-                status='pending'
+                order=order, user=request.user, amount=order.total_amount,
+                payment_method='upi', refund_reason=refund_reason, upi_id=upi_id, status='pending'
             )
-        
         elif order.payment_method == 'card':
             account_holder_name = request.POST.get('account_holder_name')
             bank_name = request.POST.get('bank_name')
             account_number = request.POST.get('account_number')
             ifsc_code = request.POST.get('ifsc_code')
             card_last4 = request.POST.get('card_last4')
-            
             if not all([account_holder_name, bank_name, account_number, ifsc_code]):
                 messages.error(request, "Please provide all bank details for refund")
                 return render(request, 'refund_form.html', {'order': order})
-            
             Refund.objects.create(
-                order=order,
-                user=request.user,
-                amount=order.total_amount,
-                payment_method='card',
-                refund_reason=refund_reason,
-                account_holder_name=account_holder_name,
-                bank_name=bank_name,
-                account_number=account_number,
-                ifsc_code=ifsc_code,
-                card_number=card_last4,
-                status='pending'
+                order=order, user=request.user, amount=order.total_amount,
+                payment_method='card', refund_reason=refund_reason,
+                account_holder_name=account_holder_name, bank_name=bank_name,
+                account_number=account_number, ifsc_code=ifsc_code,
+                card_number=card_last4, status='pending'
             )
         
-        # Cancel the order
         for item in order.items.all():
             if item.weight and item.weight in item.product.stock_per_weight:
                 item.product.stock_per_weight[item.weight] += item.quantity
                 item.product.save()
-        
         order.order_status = 'cancelled'
         order.save()
-        
         messages.success(request, f"Order cancelled! Refund request submitted. Amount ₹{order.total_amount} will be refunded within 3-5 business days.")
         return redirect('my_orders')
-    
     return render(request, 'refund_form.html', {'order': order})
+
 
 @login_required(login_url='login')
 def seller_update_refund(request, refund_id):
     refund = get_object_or_404(Refund, id=refund_id)
-    
-    # Check if the refund belongs to this seller's products
     seller_products = Product.objects.filter(seller=request.user)
     if not refund.order.items.filter(product__in=seller_products).exists():
         messages.error(request, "You don't have permission to update this refund")
@@ -770,48 +726,86 @@ def seller_update_refund(request, refund_id):
     
     if request.method == 'POST':
         action = request.POST.get('action')
-        
         if action == 'accept':
             refund.status = 'approved'
             refund.save()
             messages.success(request, f"Refund of ₹{refund.amount} has been approved. Processing will begin.")
-            
         elif action == 'reject':
             rejection_reason = request.POST.get('rejection_reason')
             if not rejection_reason or not rejection_reason.strip():
                 messages.error(request, "Please provide a reason for rejecting the refund.")
                 return redirect('seller_dashboard')
-            
             refund.status = 'rejected'
             refund.rejection_reason = rejection_reason.strip()
             refund.save()
             messages.warning(request, f"Refund request rejected. Reason: {rejection_reason}")
-            
         elif action == 'accept_after_warning':
-            # Seller accepts refund after admin warning
             refund.status = 'approved'
             refund.save()
-            messages.success(request, f"Refund of ₹{refund.amount} has been approved after admin review. Processing will begin.")
-    
+            messages.success(request, f"Refund of ₹{refund.amount} has been approved after admin review.")
     return redirect('seller_dashboard')
+
+
+@login_required(login_url='login')
+def seller_upload_refund_proof(request, refund_id):
+    refund = get_object_or_404(Refund, id=refund_id)
+    seller_products = Product.objects.filter(seller=request.user)
+    if not refund.order.items.filter(product__in=seller_products).exists():
+        messages.error(request, "You don't have permission to update this refund")
+        return redirect('seller_dashboard')
+    
+    if request.method == 'POST':
+        proof_image = request.FILES.get('proof_image')
+        proof_notes = request.POST.get('proof_notes')
+        if proof_image:
+            refund.proof_image = proof_image
+            refund.proof_notes = proof_notes
+            refund.proof_uploaded_at = timezone.now()
+            refund.status = 'processing'
+            refund.save()
+            messages.success(request, "Refund proof submitted successfully! Admin will verify and update status.")
+        else:
+            messages.error(request, "Please upload a proof image.")
+    return redirect('seller_dashboard')
+
+
+@user_passes_test(lambda u: u.is_superuser, login_url='login')
+def admin_verify_refund(request, refund_id):
+    refund = get_object_or_404(Refund, id=refund_id)
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        admin_notes = request.POST.get('admin_notes')
+        if action == 'credit':
+            refund.status = 'credited'
+            refund.admin_verified = True
+            refund.admin_verified_at = timezone.now()
+            refund.admin_notes = admin_notes
+            refund.save()
+            messages.success(request, f"Refund #{refund.id} marked as Credited to customer.")
+        elif action == 'debit':
+            refund.status = 'debited'
+            refund.admin_verified = True
+            refund.admin_verified_at = timezone.now()
+            refund.admin_notes = admin_notes
+            refund.save()
+            messages.success(request, f"Refund #{refund.id} marked as Debited from seller.")
+    return redirect('admin_dashboard')
+
+
 # Return views
 @login_required(login_url='login')
 def request_return(request, order_id, product_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     product = get_object_or_404(Product, id=product_id)
-    
-    # Check if order is delivered
     if order.order_status != 'delivered':
         messages.error(request, "Return can only be requested for delivered orders.")
         return redirect('order_detail', order_id=order.id)
     
-    # Check if within 7 days
     days_since_delivery = (timezone.now().date() - order.updated_at.date()).days
     if days_since_delivery > 7:
         messages.error(request, f"Return window has expired. You can only return within 7 days of delivery.")
         return redirect('order_detail', order_id=order.id)
     
-    # Check if already returned
     existing_return = Return.objects.filter(order=order, product=product).first()
     if existing_return:
         messages.error(request, f"You have already requested a return for this product. Status: {existing_return.get_status_display()}")
@@ -821,23 +815,15 @@ def request_return(request, order_id, product_id):
         return_type = request.POST.get('return_type')
         reason = request.POST.get('reason')
         image = request.FILES.get('image')
-        
         if not return_type or not reason:
             messages.error(request, "Please fill all required fields.")
             return render(request, 'return_form.html', {'order': order, 'product': product})
-        
         return_request = Return.objects.create(
-            order=order,
-            user=request.user,
-            product=product,
-            return_type=return_type,
-            reason=reason,
-            image=image
+            order=order, user=request.user, product=product, return_type=return_type,
+            reason=reason, image=image
         )
-        
         messages.success(request, f"Return request submitted successfully! Request ID: {return_request.id}")
         return redirect('my_orders')
-    
     return render(request, 'return_form.html', {'order': order, 'product': product})
 
 
@@ -845,7 +831,6 @@ def request_return(request, order_id, product_id):
 def seller_returns(request):
     if not request.user.profile.role == 'seller':
         return redirect('home')
-    
     seller_products = Product.objects.filter(seller=request.user)
     returns = Return.objects.filter(product__in=seller_products).order_by('-created_at')
     return render(request, 'seller_returns.html', {'returns': returns})
@@ -854,20 +839,16 @@ def seller_returns(request):
 @login_required(login_url='login')
 def seller_update_return(request, return_id):
     return_obj = get_object_or_404(Return, id=return_id)
-    
     if request.method == 'POST':
         action = request.POST.get('action')
-        
         if action == 'approve':
             return_obj.status = 'approved'
             return_obj.save()
             messages.success(request, "Return approved!")
-            
         elif action == 'reject':
             return_obj.status = 'rejected'
             return_obj.save()
             messages.warning(request, "Return rejected. Buyer can file a complaint.")
-    
     return redirect('seller_returns')
 
 
@@ -880,22 +861,14 @@ def file_complaint(request):
         complaint_type = request.POST.get('complaint_type')
         description = request.POST.get('description')
         image = request.FILES.get('image')
-        
         seller = get_object_or_404(User, id=seller_id)
         order = get_object_or_404(Order, id=order_id) if order_id else None
-        
         complaint = Complaint.objects.create(
-            user=request.user,
-            seller=seller,
-            order=order,
-            complaint_type=complaint_type,
-            description=description,
-            image=image
+            user=request.user, seller=seller, order=order, complaint_type=complaint_type,
+            description=description, image=image
         )
-        
-        messages.success(request, f"Complaint filed successfully! Complaint ID: {complaint.id}. Admin will review and get back to you.")
+        messages.success(request, f"Complaint filed successfully! Complaint ID: {complaint.id}. Admin will review.")
         return redirect('my_complaints')
-    
     sellers = User.objects.filter(profile__role='seller', profile__seller_approved=True)
     return render(request, 'file_complaint.html', {'sellers': sellers})
 
@@ -905,60 +878,51 @@ def my_complaints(request):
     complaints = Complaint.objects.filter(user=request.user).order_by('-created_at')
     return render(request, 'my_complaints.html', {'complaints': complaints})
 
+
 @user_passes_test(lambda u: u.is_superuser, login_url='login')
 def admin_complaints(request):
-    # Redirect to admin dashboard which already has complaints tab
     return redirect('admin_dashboard')
+
 
 @user_passes_test(lambda u: u.is_superuser, login_url='login')
 def resolve_complaint(request, complaint_id):
     complaint = get_object_or_404(Complaint, id=complaint_id)
-    
     if request.method == 'POST':
         action = request.POST.get('action')
         admin_remark = request.POST.get('admin_remark')
-        
         if not admin_remark:
             messages.error(request, "Please provide remarks for your decision.")
             return redirect('admin_complaints')
-        
         if action == 'approve_buyer':
             complaint.status = 'resolved'
             complaint.admin_remark = f"Decision: Buyer's favor. {admin_remark}"
             complaint.resolved_at = timezone.now()
             complaint.save()
-            
-            # Update the related refund status to admin_warning
             if complaint.order and hasattr(complaint.order, 'refund'):
                 refund = complaint.order.refund
                 refund.status = 'admin_warning'
                 refund.admin_warning_note = admin_remark
                 refund.admin_warning_date = timezone.now()
                 refund.save()
-            
-            messages.success(request, f"Complaint resolved in buyer's favor. Warning sent to seller {complaint.seller.username}. Seller can now process the refund.")
-            
+            messages.success(request, f"Complaint resolved in buyer's favor. Warning sent to seller {complaint.seller.username}.")
         elif action == 'approve_seller':
             complaint.status = 'rejected'
             complaint.admin_remark = f"Decision: Seller's favor. {admin_remark}"
             complaint.resolved_at = timezone.now()
             complaint.save()
             messages.success(request, f"Complaint resolved in seller's favor. Buyer has been notified.")
-            
         elif action == 'remove_seller':
             seller = complaint.seller
             profile = Profile.objects.get(user=seller)
             profile.seller_approved = False
             profile.save()
-            
             complaint.status = 'resolved'
             complaint.admin_remark = f"Seller removed due to repeated complaints. {admin_remark}"
             complaint.resolved_at = timezone.now()
             complaint.save()
-            
             messages.success(request, f"Seller {seller.username} has been removed from the platform.")
-    
     return redirect('admin_complaints')
+
 
 # Logout view
 def logout_view(request):
